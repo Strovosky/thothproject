@@ -1,0 +1,68 @@
+{% extends 'main/dashboard.html' %}
+
+
+{% block graph_notes %}
+<div class="row mt-4">
+  <div class="card card-plain">
+    {% if messages %}
+      {% for message in messages %}
+      <div class="alert alert-warning alert-dismissible text-white" role="alert">
+        <span class="text-sm">{{message}}</span>
+        <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      {% endfor %}
+    {% endif %}
+    <div class="card-header">
+      <h4 class="font-weight-bolder">Edit Word</h4>
+      <p class="mb-0">{{definition.text.capitalize}}</p>
+    </div>
+    <div class="card-body">
+      <form method="post", action="#" role="form">
+        {% csrf_token %}
+        {% for english in definition.english.all %}
+        <div class="input-group input-group-outline mb-3">
+          <label class="form-label">Edit the word: {{english.name.capitalize}}</label>
+          <input type="text" name="edit_english" class="form-control">
+        </div>
+        {% endfor %}
+        <div class="input-group input-group-outline mb-3">
+          <label class="form-label">Add another English word to this definition:</label>
+          <input type="text" name="another_english" class="form-control">
+        </div>
+        {% for spanish in definition.spanish.all %}
+        <div class="input-group input-group-outline mb-3">
+          <label class="form-label">Edit the word: {{spanish.name.capitalize}}</label>
+          <input type="text" name="edit_spanish" class="form-control">
+        </div>
+        {% endfor %}
+        <div class="input-group input-group-outline mb-3">
+          <label class="form-label">Add another Spanish word to this definition:</label>
+          <input type="text" name="another_spanish" class="form-control">
+        </div>
+        <div class="input-group input-group-outline mb-3">
+          <label class="form-label">Change the definition:</label>
+          <input type="text" name="edit_definition" class="form-control">
+        </div>
+        {% for abbreviation in definition.abbreviation.all %}
+        <div class="input-group input-group-outline mb-3">
+          <label class="form-label">Change the abbreviation: {{abbreviation.text}}</label>
+          <input type="text" name="edit_abbreviation" class="form-control" >
+        </div>
+        {% endfor %}
+        <div class="input-group input-group-outline mb-3">
+          <label class="form-label">Add another abbreviation:</label>
+          <input type="text" name="add_abbreviation" class="form-control" >
+        </div>
+        <div class="text-center">
+          <button type="submit" class="btn btn-lg bg-gradient-primary btn-lg w-100 mt-4 mb-0">Save Edit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock graph_notes %}
+
+
+
