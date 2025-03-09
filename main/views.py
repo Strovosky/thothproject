@@ -1,8 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-#from interpreter.models import Interpreter
-#from .models import Category, English, Spanish, Abbreviation, Definition
+from interpreter.models import Interpreter
+from .models import Category, English, Spanish, Abbreviation, Definition
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
@@ -11,7 +11,7 @@ from django.core.paginator import Paginator
 
 # Create your views here.
 
-"""
+
 categories_dict = {
     "medicine":Category.objects.get(name="medicine").name.lower(),
     "social_programs":Category.objects.get(name="social programs").name.lower(),
@@ -123,5 +123,5 @@ def word_search(response, word: str):
     paginated_definitions = pagination.get_page(page)
     return render(response, "main/word_search.html", {"definitions":paginated_definitions, "word_to_find":word, "categories_dict":categories_dict, "pagination":pagination})
 
-"""
+
 
