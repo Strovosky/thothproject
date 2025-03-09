@@ -9,24 +9,28 @@ from django.db.models import Q
 
 from django.core.paginator import Paginator
 
+import requests
+
+
+# Creat your endpoints here
+
+last_10_definitions_endpoint = "http://localhost:8000/api/last_10_definitions/"
+category_options_endpoint = "http://localhost:8000/api/category_options/"
+
+
 # Create your views here.
 
 
-categories_dict = {
-    "medicine":Category.objects.get(name="medicine").name.lower(),
-    "social_programs":Category.objects.get(name="social programs").name.lower(),
-    "car_insurance":Category.objects.get(name="car insurance").name.lower(),
-    "legal":Category.objects.get(name="legal").name.lower(),
-    "finance":Category.objects.get(name="finance").name.lower()
-}
+
 
 @login_required
 def dashboard(response):
     if response.method == "POST":
         if response.POST.get("word_search"):
             return redirect(to="dashboard_urls:word_search", word=response.POST.get("word_search").lower())
-    last_10_definitions = Definition.objects.all().order_by("id").reverse()[:10]
-    return render(response, "main/dashboard.html", {"definitions":last_10_definitions, "categories_dict":categories_dict})
+    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
+    categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
+    return render(response, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict})
 
 @login_required
 def new_word(response):

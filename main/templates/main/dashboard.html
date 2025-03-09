@@ -415,7 +415,7 @@
                   <h6>Latest Words</h6>
                   <p class="text-sm mb-0">
                     <i class="fa fa-check text-info" aria-hidden="true"></i>
-                    These are the<span class="font-weight-bold ms-1">{{definitions.count}} latest words added</span>
+                    These are the<span class="font-weight-bold ms-1">{{last_10_definitions|length}} latest words added</span>
                   </p>
                 </div>
                 {% endif %}
@@ -445,44 +445,44 @@
                     </tr>
                   </thead>
                   <tbody>
-                    {% for definition in definitions %}
+                    {% for defi in last_10_definitions %}
                     <tr>
                       <td>
                         <div class="d-flex px-2 py-1">
-                          {% if definition.category.name.lower == categories_dict.medicine %}
+                          {% if defi.category.lower == categories_dict.medicine %}
                           <div>
                             <img src="{% static 'img/small-logos/google-webdev.svg' %}" class="avatar avatar-sm me-3" alt="xd">
                           </div>
-                          {% elif definition.category.name.lower == categories_dict.social_programs %}
+                          {% elif defi.category.lower == categories_dict.social_programs %}
                           <div>
                             <img src="{% static 'img/small-logos/logo-asana.svg' %}" class="avatar avatar-sm me-3" alt="xd">
                           </div>
-                          {% elif definition.category.name.lower == categories_dict.car_insurance %}
+                          {% elif defi.category.lower == categories_dict.car_insurance %}
                           <div>
                             <img src="{% static 'img/small-logos/logo-invision.svg' %}" class="avatar avatar-sm me-3" alt="xd">
                           </div>
-                          {% elif definition.category.name.lower == categories_dict.legal %}
+                          {% elif defi.category.lower == categories_dict.legal %}
                           <div>
                             <img src="{% static 'img/small-logos/github.svg' %}" class="avatar avatar-sm me-3" alt="xd">
                           </div>
-                          {% elif definition.category.name.lower == categories_dict.finance %}
+                          {% elif defi.category.lower == categories_dict.finance %}
                           <div>
                             <img src="{% static 'img/small-logos/bootstrap.svg' %}" class="avatar avatar-sm me-3" alt="xd">
                           </div>
                           {% endif %}
                           <div class="d-flex flex-column justify-content-center">
-                            <a href="{% url 'dashboard_urls:word_description' definition.id %}"><h6 class="mb-0 text-sm">{{definition.english.all.0.name.capitalize}}</h6></a>
+                            <a href="{% url 'dashboard_urls:word_description' defi.id %}"><h6 class="mb-0 text-sm">{{defi.english.capitalize}}</h6></a>
                           </div>
                         </div>
                       </td>
                       <td class="align-middle text-center text-sm">
-                        <span class="text-xs font-weight-bold"> {{definition.abbreviation.all.0.text.upper}} </span>
+                        <span class="text-xs font-weight-bold"> {{defi.abbreviation.upper}} </span>
                       </td>
                       <td class="align-middle text-center text-sm">
-                        <h6 class="text-xs font-weight-bold"> {{definition.spanish.all.0.name.capitalize}} </h6>
+                        <h6 class="text-xs font-weight-bold"> {{defi.spanish.capitalize}} </h6>
                       </td>
                       <td class="align-middle text-center text-sm">
-                        <span class="text-xs font-weight-bold"> {{definition}} </span>
+                        <span class="text-xs font-weight-bold"> {{defi.text.capitalize}} </span>
                       </td>
                     </tr>
                     {% endfor %}
