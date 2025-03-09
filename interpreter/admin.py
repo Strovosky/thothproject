@@ -3,4 +3,4 @@ from .models import Interpreter
 
 # Register your models here.
 
-#admin.site.register(Interpreter)
+admin.site.register(Interpreter)
