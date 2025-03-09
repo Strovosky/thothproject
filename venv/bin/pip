@@ -1,4 +1,4 @@
-#!/home/strovosky/MyClasses/Thoth/venv/bin/python
+#!/home/strovosky/MyProjects/thothproject/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
