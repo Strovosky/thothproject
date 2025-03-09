@@ -3,7 +3,7 @@ from interpreter.models import Interpreter
 
 # Create your models here.
 
-
+"""
 class English(Model):
     name = CharField(verbose_name="English", max_length=50, blank=False, null=False, unique=True)
     creator = ForeignKey(to=Interpreter, null=True, on_delete=SET_NULL)
@@ -45,4 +45,4 @@ class Definition(Model):
     def __str__(self):
         return str(self.text)[:12].capitalize() + "..."
     
-
+"""
