@@ -16,6 +16,7 @@ import requests
 
 last_10_definitions_endpoint = "http://localhost:8000/api/last_10_definitions/"
 category_options_endpoint = "http://localhost:8000/api/category_options/"
+individual_description_endpoint = "http://localhost:8000/api/individual_description/"
 
 
 # Create your views here.
@@ -33,22 +34,22 @@ def dashboard(response):
     return render(response, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict})
 
 @login_required
-def new_word(response):
-    if response.method == "POST":
-        if response.POST.get("word_search"):
-            return redirect(to="dashboard_urls:word_search", word=response.POST.get("word_search").lower())
-        elif response.POST.get("english") and response.POST.get("spanish") and response.POST.get("definition") and response.POST.get("category"):
+def new_word(request):
+    if request.method == "POST":
+        if request.POST.get("word_search"):
+            return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
+        elif request.POST.get("english") and request.POST.get("spanish") and request.POST.get("definition") and request.POST.get("category"):
             dict_info = {
-                "english": str(response.POST.get("english")).lower(),
-                "spanish": str(response.POST.get("spanish")).lower(),
-                "definition": str(response.POST.get("definition")).lower(),
-                "category": str(response.POST.get("category")).lower()
+                "english": str(request.POST.get("english")).lower(),
+                "spanish": str(request.POST.get("spanish")).lower(),
+                "definition": str(request.POST.get("definition")).lower(),
+                "category": str(request.POST.get("category")).lower()
             }
             
             try:
                 word_result = Definition.objects.filter(Q(english__name=dict_info["english"]) | Q(spanish__name=dict_info["spanish"]) & Q(category__name=dict_info["category"]))
             except:
-                messages.error(response, message=f"The word {dict_info['english']} / {dict_info['spanish']} already exists in the dictionary.")
+                messages.error(request, message=f"The word {dict_info['english']} / {dict_info['spanish']} already exists in the dictionary.")
             else:
                 if word_result.count() == 0:
                     english = English.objects.create(name=str(dict_info["english"]).lower())
@@ -60,30 +61,32 @@ def new_word(response):
                     definition.save()
                     definition.english.add(english)
                     definition.spanish.add(spanish)
-                    
-                    if response.POST.get("abbreviation"):
-                        if Abbreviation.objects.filter(text=str(response.POST.get("abbreviation")).upper()).count() > 0:
-                            abbreviation = Abbreviation.objects.get(text=str(response.POST.get("abbreviation")).upper())
+                    if request.POST.get("abbreviation"):
+                        if Abbreviation.objects.filter(text=str(request.POST.get("abbreviation")).upper()).count() > 0:
+                            abbreviation = Abbreviation.objects.get(text=str(request.POST.get("abbreviation")).upper())
                         else:
-                            abbreviation = Abbreviation.objects.create(text=str(response.POST.get("abbreviation")).upper())
+                            abbreviation = Abbreviation.objects.create(text=str(request.POST.get("abbreviation")).upper())
                             abbreviation.save()
                         definition.abbreviation.add(abbreviation)
                     
                     return redirect(to="dashboard_urls:word_description", id_definition=definition.id)
                 else:
-                    messages.error(response, message=f"The word {dict_info['english']} / {dict_info['spanish']} already exists in the dictionary.")
+                    messages.error(request, message=f"The word {dict_info['english']} / {dict_info['spanish']} already exists in the dictionary.")
         else:
-            messages.error(response, "The required fields must be filled to create a new word.")
-    return render(response, "main/new_word.html", {"category_object":Category.objects.all()})
+            messages.error(request, "The required fields must be filled to create a new word.")
+    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
+    categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
+    return render(request, "main/new_word.html", {"category_object":Category.objects.all(), "category_dict":categories_dict, "last_10_definitions":last_10_definitions})
 
 @login_required
 def word_description(response, id_definition: int):
     if response.method == "POST":
         if response.POST.get("word_search"):
             return redirect(to="dashboard_urls:word_search", word=response.POST.get("word_search").lower())
-    last_10_definitions = Definition.objects.all().reverse()[:10]
-    definition = get_object_or_404(Definition, pk=id_definition)
-    return render(response, "main/word.html", {"definition":definition, "definitions":last_10_definitions, "categories_dict":categories_dict})
+    definition = requests.get(url=individual_description_endpoint, params={"id_definition":id_definition}, timeout=2).json()
+    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
+    categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
+    return render(response, "main/word.html", {"definition":definition, "last_10_definitions":last_10_definitions, "categories_dict":categories_dict})
 
 @login_required
 def edit_word(response, id_definition: int):
@@ -114,7 +117,10 @@ def edit_word(response, id_definition: int):
             if response.POST.get("another_spanish"):
                 definition.spanish.create(name=str(response.POST.get("another_spanish")).lower(), creator=response.user)
         return redirect(to="dashboard_urls:word_description", id_definition=definition.id)
-    return render(response, "main/edit_word.html", {"definition":definition})
+    definition = requests.get(url=individual_description_endpoint, params={"id_definition":id_definition}).json()
+    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
+    categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
+    return render(response, "main/edit_word.html", {"definition":definition, "last_10_definitions":last_10_definitions, "category_dict":categories_dict})
 
 @login_required
 def word_search(response, word: str):
@@ -125,7 +131,9 @@ def word_search(response, word: str):
     pagination = Paginator(definitions, 10)
     page = response.GET.get("page")
     paginated_definitions = pagination.get_page(page)
-    return render(response, "main/word_search.html", {"definitions":paginated_definitions, "word_to_find":word, "categories_dict":categories_dict, "pagination":pagination})
+    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
+    categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
+    return render(response, "main/word_search.html", {"definitions":paginated_definitions, "word_to_find":word, "categories_dict":categories_dict, "pagination":pagination, "last_10_definitions":last_10_definitions})
 
 
 

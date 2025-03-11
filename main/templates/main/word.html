@@ -4,21 +4,21 @@
 <div class="row mt-4">
   <div class="card card-plain">
     <div class="card-header">
-      <h4 class="font-weight-bolder">{{definition.english.all.0.name.capitalize}}</h4>
+      <h4 class="font-weight-bolder">{{definition.english.names.0.capitalize}}</h4>
       <!--p class="mb-0">Enter the information below to create the new word</p-->
     </div>
     <div class="card-body">
       <form action="#" role="form">
         <div>
           <p><b>English</b></p>
-          {% for english in definition.english.all %}
-          <p class="form-label">{{english.name.title}}</p>
+          {% for english in definition.english.names %}
+          <p class="form-label">{{english.title}}</p>
           {% endfor %}
         </div>
         <div>
           <p><b>Spanish</b></p>
-          {% for spanish in definition.spanish.all %}
-          <p class="form-label">{{spanish.name.title}}</p>
+          {% for spanish in definition.spanish.names %}
+          <p class="form-label">{{spanish.title}}</p>
           {% endfor %}
         <div>
           <p><b>Definition</b></p>
@@ -26,17 +26,17 @@
         </div>
         <div>
           <p><b>Abbreviation</b></p>
-          {% if definition.abbreviation.count == 0 %}
+          {% if definition.abbreviation.texts.count == 0 %}
           <p class="form-label">The word has no abbreviations.</p>
           {% else %}
-            {% for abb in definition.abbreviation.all %}
-            <p class="form-label">{{abb.text.upper}}</p>
+            {% for abb in definition.abbreviation.texts %}
+            <p class="form-label">{{abb.upper}}</p>
             {% endfor %}
           {% endif %}
         </div>
         <div>
           <p><b>Category</b></p>
-          <p class="form-label">{{definition.category.name.capitalize}}</p>
+          <p class="form-label">{{definition.category.capitalize}}</p>
         </div>
         <div class="text-center">
           <a href="{% url 'dashboard_urls:edit_word' definition.id %}" class="btn btn-lg bg-gradient-primary btn-lg w-100 mt-4 mb-0">Edit Word</a>

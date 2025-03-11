@@ -15,15 +15,15 @@
       {% endfor %}
     {% endif %}
     <div class="card-header">
-      <h4 class="font-weight-bolder">Edit Word</h4>
+      <h4 class="font-weight-bolder">Edit Word: {{definition.english.names.0.capitalize}}</h4>
       <p class="mb-0">{{definition.text.capitalize}}</p>
     </div>
     <div class="card-body">
       <form method="post", action="#" role="form">
         {% csrf_token %}
-        {% for english in definition.english.all %}
+        {% for english in definition.english.names %}
         <div class="input-group input-group-outline mb-3">
-          <label class="form-label">Edit the word: {{english.name.capitalize}}</label>
+          <label class="form-label">Edit the english word: {{english.capitalize}}</label>
           <input type="text" name="edit_english" class="form-control">
         </div>
         {% endfor %}
@@ -31,23 +31,23 @@
           <label class="form-label">Add another English word to this definition:</label>
           <input type="text" name="another_english" class="form-control">
         </div>
-        {% for spanish in definition.spanish.all %}
+        {% for spanish in definition.spanish.names %}
         <div class="input-group input-group-outline mb-3">
-          <label class="form-label">Edit the word: {{spanish.name.capitalize}}</label>
+          <label class="form-label">Edit the spanish word: {{spanish.capitalize}}</label>
           <input type="text" name="edit_spanish" class="form-control">
         </div>
         {% endfor %}
         <div class="input-group input-group-outline mb-3">
-          <label class="form-label">Add another Spanish word to this definition:</label>
+          <label class="form-label">Add another spanish word to this definition:</label>
           <input type="text" name="another_spanish" class="form-control">
         </div>
         <div class="input-group input-group-outline mb-3">
           <label class="form-label">Change the definition:</label>
           <input type="text" name="edit_definition" class="form-control">
         </div>
-        {% for abbreviation in definition.abbreviation.all %}
+        {% for abbreviation in definition.abbreviation.texts %}
         <div class="input-group input-group-outline mb-3">
-          <label class="form-label">Change the abbreviation: {{abbreviation.text}}</label>
+          <label class="form-label">Change the abbreviation: {{abbreviation}}</label>
           <input type="text" name="edit_abbreviation" class="form-control" >
         </div>
         {% endfor %}
