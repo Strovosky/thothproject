@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from interpreter.models import Interpreter
 from .models import Category, English, Spanish, Abbreviation, Definition
@@ -24,14 +24,21 @@ individual_description_endpoint = "http://localhost:8000/api/individual_descript
 
 
 
-@login_required
-def dashboard(response):
-    if response.method == "POST":
-        if response.POST.get("word_search"):
-            return redirect(to="dashboard_urls:word_search", word=response.POST.get("word_search").lower())
-    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
-    categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
-    return render(response, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict})
+#@login_required
+def dashboard(request):
+    if request.COOKIES.get("auth_token"):
+        if request.method == "POST":
+            if request.POST.get("word_search"):
+                return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
+        token = request.COOKIES.get("auth_token")
+        headers = {"Authorization":f"Token {token}"}
+        last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
+        categories_dict = requests.get(url=category_options_endpoint, headers=headers, timeout=2).json()
+        the_render = render(request, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict})
+        the_render.set_cookie("auth_token", token, httponly=True)
+        return the_render
+    else:
+        return HttpResponseRedirect(reverse("interpreter_urls:signin"))
 
 @login_required
 def new_word(request):
@@ -74,7 +81,9 @@ def new_word(request):
                     messages.error(request, message=f"The word {dict_info['english']} / {dict_info['spanish']} already exists in the dictionary.")
         else:
             messages.error(request, "The required fields must be filled to create a new word.")
-    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
+    token = request.COOKIES["auth_token"]
+    headers = {"Authorization":f"Token {token}"}
+    last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
     categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
     return render(request, "main/new_word.html", {"category_object":Category.objects.all(), "category_dict":categories_dict, "last_10_definitions":last_10_definitions})
 
@@ -83,8 +92,10 @@ def word_description(response, id_definition: int):
     if response.method == "POST":
         if response.POST.get("word_search"):
             return redirect(to="dashboard_urls:word_search", word=response.POST.get("word_search").lower())
-    definition = requests.get(url=individual_description_endpoint, params={"id_definition":id_definition}, timeout=2).json()
-    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
+    token = response.COOKIES["auth_token"]
+    headers = {"Authorization":f"Token {token}"}
+    definition = requests.get(url=individual_description_endpoint, headers=headers, params={"id_definition":id_definition}, timeout=2).json()
+    last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
     categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
     return render(response, "main/word.html", {"definition":definition, "last_10_definitions":last_10_definitions, "categories_dict":categories_dict})
 
@@ -117,8 +128,10 @@ def edit_word(response, id_definition: int):
             if response.POST.get("another_spanish"):
                 definition.spanish.create(name=str(response.POST.get("another_spanish")).lower(), creator=response.user)
         return redirect(to="dashboard_urls:word_description", id_definition=definition.id)
-    definition = requests.get(url=individual_description_endpoint, params={"id_definition":id_definition}).json()
-    last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
+    token = response.COOKIES.get("auth_token")
+    headers = {"Authorization":f"Token {token}"}
+    definition = requests.get(url=individual_description_endpoint, headers=headers, params={"id_definition":id_definition}).json()
+    last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
     categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
     return render(response, "main/edit_word.html", {"definition":definition, "last_10_definitions":last_10_definitions, "category_dict":categories_dict})
 

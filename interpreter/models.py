@@ -48,8 +48,8 @@ class Interpreter(AbstractBaseUser, PermissionsMixin):
 
     #Campor requeridos
 
-    email = EmailField(verbose_name="email", max_length=150, unique=True)
-    username = CharField(verbose_name="username", max_length=100, unique=True)
+    email = EmailField(verbose_name="email", max_length=150, unique=True, blank=True)
+    username = CharField(verbose_name="username", max_length=100, unique=True, blank=True)
     date_joined = DateTimeField(verbose_name="date joined", auto_now=True)
     last_login = DateTimeField(verbose_name="last login", auto_now_add=True)
     is_admin = BooleanField(verbose_name="Is admin", default=False)

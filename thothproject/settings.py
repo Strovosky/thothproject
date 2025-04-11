@@ -41,8 +41,8 @@ INSTALLED_APPS = [
     'main.apps.MainConfig',
     'interpreter.apps.InterpreterConfig',
     'api',
-    'rest_framework'
-
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
