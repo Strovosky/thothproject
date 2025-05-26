@@ -29,6 +29,9 @@ def dashboard(request):
         if request.method == "POST":
             if request.POST.get("word_search"):
                 return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
+            elif request.POST.get("btn_set_active_call"):
+                # This will create a new call.
+                pass
         token = request.COOKIES.get("auth_token")
         headers = {"Authorization":f"Token {token}"}
         last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()

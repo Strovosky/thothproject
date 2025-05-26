@@ -26,7 +26,7 @@ class WorkDay(Model):
     """
     This model represents a day of work.
     """
-    day_start = DateTimeField(verbose_name=_("Call started at"), help_text=_("The time the current work day started."))
+    day_start = DateTimeField(verbose_name=_("Call started at"), help_text=_("The time the current work day started."), auto_now_add=True)
     day_end = DateTimeField(verbose_name=_("Call ended at"), help_text=_("The time the work day ended."), default=timezone.now().replace(hour=23, minute=59, second=59))
 
     active = BooleanField(verbose_name=_("Is_active?"), help_text=_("Is this day active?"), default=False)
@@ -41,7 +41,7 @@ class Call(Model):
     """
     This model represents a call made during a work day.
     """
-    call_start = DateTimeField(verbose_name=_("Call started at"), help_text=_("The time the current call started."))
+    call_start = DateTimeField(verbose_name=_("Call started at"), help_text=_("The time the current call started."), auto_now_add=True)
     call_end = DateTimeField(verbose_name=_("Call ended at"), help_text=_("The time the current call ended."), default=None, null=True, blank=True)
 
     active = BooleanField(verbose_name=_("Is active?"), help_text=_("Is this call active?"), default=False)

@@ -120,7 +120,6 @@ class AuthenticateInterpreterAPIView(APIView):
             if not WorkDay.objects.filter(active=True).exists():
                 # Create a new WorkDay if it doesn't exist
                 WorkDay.objects.create(
-                    day_start=timezone.now(),
                     active=True,
                     work_month=current_work_month
                 )
@@ -168,7 +167,6 @@ class DestroyCurrentToken(APIView):
         except:
             return Response({"token_destroyed":False}, status=status.HTTP_404_NOT_FOUND)
         
-
 
 
 class CreateInterpreterAPIView(CreateAPIView):
