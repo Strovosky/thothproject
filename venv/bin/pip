@@ -1,4 +1,4 @@
-#!/home/strovosky/MyProjects/thothproject/venv/bin/python
+#!/home/strovosky/my_projects/thothproject/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

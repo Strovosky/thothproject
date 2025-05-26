@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from django.utils import timezone
 
 from main.models import Definition, Category, English, Spanish, Abbreviation
 from rest_framework.authtoken.models import Token
@@ -13,6 +14,8 @@ from interpreter.models import Interpreter
 from interpreter.serializers import InterpreterSerializer
 from main.serializers import DefinitionSerializer, IndividualDefinitionSerializer, CategorySerializer, EnglishSerializer, SpanishSerializer, AbbreviationSerializer
 from rest_framework.response import Response
+
+from budget.models import WorkMonth, WorkDay, Call
 
 # To create generic API VIEWS
 from rest_framework.generics import CreateAPIView, UpdateAPIView, RetrieveUpdateDestroyAPIView, GenericAPIView
@@ -71,6 +74,73 @@ class AuthenticateInterpreterAPIView(APIView):
     """This view will will authenticate the user and return the token."""
 
     def post(self, request, *args, **kwargs):
+
+        """
+        This part of the code will verify if there's a current WorkMonth and WorkDay already created, else it will create a new one.
+        """
+        
+        def create_work_month(self):
+            """This function will create a new WorkMonth if it doesn't exist."""
+            if not WorkMonth.objects.filter(is_current=True).exists():
+                # Create a new WorkMonth if it doesn't exist
+                if timezone.now().day >= 15:
+                    # If today is after the 15th, create a new WorkMonth with end date on the 14th of the next month
+                    current_month = WorkMonth.objects.create(
+                        start_date=timezone.now(),
+                        end_date=timezone.now().replace(day=14).replace(month=timezone.now().month + 1),
+                        is_current=True
+                        )
+                elif timezone.now().day < 15:
+                    # If today is before or on the 15th, create a new WorkMonth with end date on the 14th of the current month
+                    current_month = WorkMonth.objects.create(
+                        start_date=timezone.now(),
+                        end_date=timezone.now().replace(day=14),
+                        is_current=True
+                        )
+                    print(f"Work month created: {current_month.start_date} - {current_month.end_date}")
+            else:
+                # If a WorkMonth already exists and is active. We'll check if it's end_date is older than today, if so...
+                # we'll set it is_current to False and create a new WorkMonth.
+                for c_month in WorkMonth.objects.filter(is_current=True):
+                    if c_month.end_date < timezone.now():
+                        c_month.is_current = False
+                        c_month.save()
+                
+                if not WorkMonth.objects.filter(is_current=True).exists():
+                    self.create_work_month()
+
+        create_work_month(self)
+
+
+        def create_work_day(self):
+            """
+            This function will create a new WorkDay if it doesn't exist for the current WorkMonth.
+            """
+            current_work_month = WorkMonth.objects.get(is_current=True)
+            if not WorkDay.objects.filter(active=True).exists():
+                # Create a new WorkDay if it doesn't exist
+                WorkDay.objects.create(
+                    day_start=timezone.now(),
+                    active=True,
+                    work_month=current_work_month
+                )
+                print(f"Work day created: {timezone.now()} for month {current_work_month.start_date} - {current_work_month.end_date}")
+            else:
+                # If a WorkDay already exists and is active, we'll check if it's day_end is older than today, if so...
+                # we'll set it is_active to False and create a new WorkDay.
+                for c_day in WorkDay.objects.filter(active=True):
+                    if c_day.day_end < timezone.now():
+                        c_day.active = False
+                        c_day.save()
+                
+                if not WorkDay.objects.filter(active=True).exists():
+                    self.create_work_day()
+        
+        create_work_day(self)
+
+        """
+        This part of the code will do the authentication of the user.
+        """
         if not request.data.get("email") or not request.data.get("password"):
             return Response({"error":"No email or password provided."}, status=status.HTTP_400_BAD_REQUEST)
         interpreter = authenticate(request, email=request.data.get("email"), password=request.data.get("password"))
@@ -82,6 +152,7 @@ class AuthenticateInterpreterAPIView(APIView):
         response = Response({"token":token.key, "interpreter_id":interpreter.id}, status=status.HTTP_200_OK)
         response.set_cookie('auth_token', token.key, httponly=True)
         return response
+                    
 
 
 class DestroyCurrentToken(APIView):

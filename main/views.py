@@ -23,7 +23,6 @@ individual_description_endpoint = "http://localhost:8000/api/individual_descript
 
 
 
-
 #@login_required
 def dashboard(request):
     if request.COOKIES.get("auth_token"):
@@ -106,26 +105,29 @@ def edit_word(response, id_definition: int):
         if response.POST.get("word_search"):
             return redirect(to="dashboard_urls:word_search", word=response.POST.get("word_search").lower())
         else:
-            if response.POST.get("edit_english"):
-                english = English.objects.filter(definition__id=definition.id)
+            if response.POST.get("btn_change_english"):
+                english = English.objects.get(name=response.POST.get("btn_change_english"))
                 english.name = str(response.POST.get("edit_english")).lower()
-            if response.POST.get("edit_spanish"):
-                spanish = Spanish.objects.filter(definition__id=definition.id)
+                english.save()
+            if response.POST.get("btn_change_spanish"):
+                spanish = Spanish.objects.get(name=response.POST.get("btn_change_spanish"))
                 spanish.name = str(response.POST.get("edit_spanish")).lower()
+                spanish.save()
             if response.POST.get("edit_abbreviation"):
                 abbreviation = Abbreviation.objects.filter(definition__id=definition.id)
                 abbreviation.name = str(response.POST.get("edit_abbreviation")).upper()
-            if response.POST.get("add_abbreviation"):
+            if response.POST.get("add_abbreviation") and response.POST.get("btn_add_abbreviation") == "pressed":
                 try:
                     new_abbreviation = Abbreviation.objects.get(text=str(response.POST.get("add_abbreviation")).upper())
                     definition.abbreviation.add(new_abbreviation)
                 except:
                     definition.abbreviation.create(text=str(response.POST.get("add_abbreviation")).upper())
-            if response.POST.get("edit_definition"):
-                definition.text = str(response.POST.get("edit_definition")).lower()
-            if response.POST.get("another_english"):
+            if response.POST.get("change_definition") and response.POST.get("btn_change_definition") == "pressed":
+                definition.text = str(response.POST.get("change_definition")).lower()
+                definition.save()
+            if response.POST.get("another_english") and response.POST.get("btn_add_english") == "pressed":
                 definition.english.create(name=str(response.POST.get("another_english")).lower(), creator=response.user)
-            if response.POST.get("another_spanish"):
+            if response.POST.get("another_spanish") and response.POST.get("btn_add_spanish") == "pressed":
                 definition.spanish.create(name=str(response.POST.get("another_spanish")).lower(), creator=response.user)
         return redirect(to="dashboard_urls:word_description", id_definition=definition.id)
     token = response.COOKIES.get("auth_token")

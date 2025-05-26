@@ -261,7 +261,7 @@
     <div class="container-fluid py-4">
       {% block small_notes %}
       <div class="row">
-        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+        <!--div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-3 pt-2">
               <div class="icon icon-lg icon-shape bg-gradient-dark shadow-dark text-center border-radius-xl mt-n4 position-absolute">
@@ -277,42 +277,48 @@
               <p class="mb-0"><span class="text-success text-sm font-weight-bolder">+55% </span>than last week</p>
             </div>
           </div>
-        </div>
+        </div-->
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-3 pt-2">
-              <div class="icon icon-lg icon-shape bg-gradient-primary shadow-primary text-center border-radius-xl mt-n4 position-absolute">
-                <i class="material-icons opacity-10">person</i>
-              </div>
+              <form method="post" action="">
+                {% csrf_token %}
+                <button name="btn_set_active_call" class="icon icon-lg icon-shape bg-gradient-primary shadow-primary text-center border-radius-xl mt-n4 position-absolute">
+                  <i class="material-icons opacity-10">person</i>
+                </button>
+              </form>
               <div class="text-end pt-1">
-                <p class="text-sm mb-0 text-capitalize">Today's Users</p>
-                <h4 class="mb-0">2,300</h4>
+                <h4 class="text-sm mb-0 text-capitalize">No Active Call</h4>
+                <p class="mb-0">Hora Última llamada</p>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-3">
-              <p class="mb-0"><span class="text-success text-sm font-weight-bolder">+3% </span>than last month</p>
+              <p class="mb-0">Llamadas completadas hoy: <span class="text-success text-sm font-weight-bolder">5</span></p>
             </div>
           </div>
         </div>
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-3 pt-2">
-              <div class="icon icon-lg icon-shape bg-gradient-success shadow-success text-center border-radius-xl mt-n4 position-absolute">
-                <i class="material-icons opacity-10">person</i>
-              </div>
+              <form method="post" action="">
+                {% csrf_token %}
+                <button name="btn_set_inactive_call" class="icon icon-lg icon-shape bg-gradient-success shadow-success text-center border-radius-xl mt-n4 position-absolute">
+                  <i class="material-icons opacity-10">person</i>
+                </button>
+              </form>
               <div class="text-end pt-1">
-                <p class="text-sm mb-0 text-capitalize">New Clients</p>
-                <h4 class="mb-0">3,462</h4>
+                <h4 class="text-sm mb-0 text-capitalize">Active Call</h4>
+                <p class="mb-0">Hora llamada iniciada</p>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-3">
-              <p class="mb-0"><span class="text-danger text-sm font-weight-bolder">-2%</span> than yesterday</p>
+              <p class="mb-0">Llamada número <span class="text-success text-sm font-weight-bolder">6</span> hoy.</p>
             </div>
           </div>
         </div>
-        <div class="col-xl-3 col-sm-6">
+        <!--div class="col-xl-3 col-sm-6">
           <div class="card">
             <div class="card-header p-3 pt-2">
               <div class="icon icon-lg icon-shape bg-gradient-info shadow-info text-center border-radius-xl mt-n4 position-absolute">
@@ -328,7 +334,7 @@
               <p class="mb-0"><span class="text-success text-sm font-weight-bolder">+5% </span>than yesterday</p>
             </div>
           </div>
-        </div>
+        </div-->
       </div>
       {% endblock small_notes %}
       {% block graph_notes %}
