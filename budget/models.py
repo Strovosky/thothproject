@@ -2,6 +2,8 @@ from django.db.models import Model, CharField, IntegerField, ForeignKey, CASCADE
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
+from interpreter.models import Interpreter
+
 # Create your models here.
 
 
@@ -18,6 +20,8 @@ class WorkMonth(Model):
     
     is_current = BooleanField(verbose_name=_("Is current month?"), help_text=_("Is this the current month?"), default=False)
 
+    interpreter = ForeignKey(Interpreter, verbose_name=_("Interpreter"), help_text=_("The interpreter who worked this month."), on_delete=CASCADE, related_name="work_months")
+
     def __str__(self):
         return self.start_date.strftime("%B %Y")
     
@@ -32,9 +36,13 @@ class WorkDay(Model):
     active = BooleanField(verbose_name=_("Is_active?"), help_text=_("Is this day active?"), default=False)
 
     work_month = ForeignKey(WorkMonth, verbose_name=_("Work month"), help_text=_("The month this work day belongs to."), on_delete=CASCADE, related_name="work_days")
+    interpreter = ForeignKey(Interpreter, verbose_name=_("Interpreter"), help_text=_("The interpreter who worked this day."), on_delete=CASCADE, related_name="work_days")
+
 
     def __str__(self):
-        return f"{self.day_start.strftime('%d/%m/%Y')} - {self.day_end.strftime('%d/%m/%Y')}"
+        return f"{self.interpreter.username}'s day worked on {self.day_start.strftime('%d/%m/%Y')}"
+    
+
 
 
 class Call(Model):
@@ -49,7 +57,9 @@ class Call(Model):
     note = CharField(verbose_name=_("Note"), help_text=_("A note for this call."), max_length=255, default="", blank=True)
 
     work_day = ForeignKey(WorkDay, verbose_name=_("Work day"), help_text=_("The work day this call belongs to."), on_delete=CASCADE, related_name="calls")
+    interpreter = ForeignKey(Interpreter, verbose_name=_("Interpreter"), help_text=_("The interpreter who made this call."), on_delete=CASCADE, related_name="calls")
+
 
     def __str__(self):
-        return f"{self.call_start.strftime('%d/%m/%Y %H:%M')} - {self.call_end.strftime('%d/%m/%Y %H:%M')}"
+        return f"Call for {self.interpreter.username} at {self.call_start.strftime('%d/%m/%Y %H:%M')}"
 

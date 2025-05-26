@@ -10,13 +10,13 @@ class CallSerializer(ModelSerializer):
         fields = [
             "id",
             "interpreter",
-            "client",
-            "start_time",
-            "end_time",
-            "status",
-            "notes"
+            "call_start",
+            "call_end",
+            "active",
+            "note",
+            "work_day"
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "call_start", "updated_at"]
         extra_kwargs = {
             "interpreter": {"required": True, "error_messages": {"required": _("Interpreter is required.")}},
             "client": {"required": True, "error_messages": {"required": _("Client is required.")}},

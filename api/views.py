@@ -226,6 +226,15 @@ class RetrieveUpdateDestroyInterpreterAPIView(RetrieveUpdateDestroyAPIView):
         instance.save()
 
 
+#class CreateCall(CreateAPIView):
+    #"""
+    #This API view will cretate a new call.
+    #"""
+    #queryset = Call.objects.all()
+    #serializer_class = # I'm creating a new serializer for this one
+
+
+
 """ THIS ONE IS ONLY A TEST
 @api_view(["POST"])
 def create_word(request):
