@@ -6,10 +6,13 @@ from .models import Category, English, Spanish, Abbreviation, Definition
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from django.utils import timezone
 
 from django.core.paginator import Paginator
 
 import requests
+
+from api.endpoints import *
 
 
 # Creat your endpoints here
@@ -26,17 +29,30 @@ individual_description_endpoint = "http://localhost:8000/api/individual_descript
 #@login_required
 def dashboard(request):
     if request.COOKIES.get("auth_token"):
+        call = None
         if request.method == "POST":
             if request.POST.get("word_search"):
                 return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
             elif request.POST.get("btn_set_active_call"):
                 # This will create a new call.
-                pass
+                work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{timezone.now().date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
+                if work_day_response.status_code != 200:
+                    for value in work_day_response.json().values():
+                        messages.error(request, value)
+                else:
+                    ### TOMORROW I HAVE TO FIX THE REST OF THIS LOGIC
+                    call_response = requests.post(url=create_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, data={"active":True, "work_day":work_day_response.json()["id"], "interpreter":request.user.id}, timeout=2)
+                    if call_response.status_code != 201:
+                        messages.error(request, "There was an error creating the call. Please try again later.")
+                        print(call)
+                    else:
+                        call = call_response.json()
+                        print(call)
         token = request.COOKIES.get("auth_token")
         headers = {"Authorization":f"Token {token}"}
         last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
         categories_dict = requests.get(url=category_options_endpoint, headers=headers, timeout=2).json()
-        the_render = render(request, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict})
+        the_render = render(request, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict, "call":call})
         the_render.set_cookie("auth_token", token, httponly=True)
         return the_render
     else:

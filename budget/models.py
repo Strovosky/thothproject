@@ -43,8 +43,6 @@ class WorkDay(Model):
         return f"{self.interpreter.username}'s day worked on {self.day_start.strftime('%d/%m/%Y')}"
     
 
-
-
 class Call(Model):
     """
     This model represents a call made during a work day.

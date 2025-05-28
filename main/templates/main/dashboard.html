@@ -278,12 +278,13 @@
             </div>
           </div>
         </div-->
+        {% if not call or not call.active %}
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-3 pt-2">
               <form method="post" action="">
                 {% csrf_token %}
-                <button name="btn_set_active_call" class="icon icon-lg icon-shape bg-gradient-primary shadow-primary text-center border-radius-xl mt-n4 position-absolute">
+                <button type="submit" name="btn_set_active_call" class="icon icon-lg icon-shape bg-gradient-primary shadow-primary text-center border-radius-xl mt-n4 position-absolute" value="set_active">
                   <i class="material-icons opacity-10">person</i>
                 </button>
               </form>
@@ -298,12 +299,17 @@
             </div>
           </div>
         </div>
+        <script>
+          // Reset stopwatch when call becomes inactive
+          localStorage.removeItem("stopwatchStartTime");
+        </script>
+        {% else %}
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-3 pt-2">
               <form method="post" action="">
                 {% csrf_token %}
-                <button name="btn_set_inactive_call" class="icon icon-lg icon-shape bg-gradient-success shadow-success text-center border-radius-xl mt-n4 position-absolute">
+                <button type="submit" name="btn_set_inactive_call" class="icon icon-lg icon-shape bg-gradient-success shadow-success text-center border-radius-xl mt-n4 position-absolute" value="set_inactive">
                   <i class="material-icons opacity-10">person</i>
                 </button>
               </form>
@@ -318,6 +324,17 @@
             </div>
           </div>
         </div>
+        <!--Here starts the stopwatch that starts counting when displayed-->
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+          <div class="card" style="width: 100%; max-width: 300px;">
+            <div class="card-header p-3 pt-2 text-center">
+              <h4 class="text-sm mb-0 text-capitalize">Stopwatch</h4>
+              <p class="mb-0"><span id="stopwatch" style="font-size: 24px; font-weight: bold;">00:00:00</span></p>
+            </div>
+          </div>
+        </div>
+        <!--Here ends the stopwatch that starts counting when displayed-->
+        {% endif %}
         <!--div class="col-xl-3 col-sm-6">
           <div class="card">
             <div class="card-header p-3 pt-2">
@@ -337,6 +354,18 @@
         </div-->
       </div>
       {% endblock small_notes %}
+      {%if messages%}
+      <div class="row mt-4">
+        <div class="col-lg-12 col-md-12 mb-md-0 mb-4">
+          <div class="alert alert-primary alert-dismissible fade show" role="alert">
+            {% for message in messages %}
+            <span class="text-sm">{{ message }}</span>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        </div>
+      </div>
+      {% endif %}
       {% block graph_notes %}
       <!--div class="row mt-4">
         <div class="col-lg-4 col-md-6 mt-4 mb-4">
@@ -990,6 +1019,64 @@
   <script async defer src="https://buttons.github.io/buttons.js"></script>
   <!-- Control Center for Material Dashboard: parallax effects, scripts for the example pages etc -->
   <script src="{% static 'js/material-dashboard.min.js' %}"></script>
+
+<!--DarkMode Script-->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      let darkModeToggle = document.getElementById("dark-version");
+
+      if (localStorage.getItem("darkMode") === "enabled") {
+        document.body.classList.add("dark-version"); // Apply correct class
+        darkModeToggle.checked = true; // Keeps toggle ON if enabled before
+      }
+
+      darkModeToggle.addEventListener("change", function () {
+        if (darkModeToggle.checked) {
+          document.body.classList.add("dark-version"); // Apply correct class
+          localStorage.setItem("darkMode", "enabled"); // Stores preference
+        } else {
+          document.body.classList.remove("dark-version"); // Remove correct class
+          localStorage.removeItem("darkMode"); // Clears preference
+        }
+      });
+    });
+  </script>
+
+<!-- Stopwatch container -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      {% if call.active %}
+        let startTime = localStorage.getItem("stopwatchStartTime");
+
+        if (!startTime) {
+          startTime = new Date().getTime();
+          localStorage.setItem("stopwatchStartTime", startTime);
+        } else {
+          startTime = parseInt(startTime);
+        }
+
+        function updateStopwatch() {
+          let elapsedTime = new Date().getTime() - startTime;
+          let hours = Math.floor(elapsedTime / 3600000);
+          let minutes = Math.floor((elapsedTime % 3600000) / 60000);
+          let seconds = Math.floor((elapsedTime % 60000) / 1000);
+
+          document.getElementById("stopwatch").textContent =
+            String(hours).padStart(2, '0') + ":" +
+            String(minutes).padStart(2, '0') + ":" +
+            String(seconds).padStart(2, '0');
+
+          requestAnimationFrame(updateStopwatch);
+        }
+
+        updateStopwatch();
+      {% endif %}
+    });
+  </script>
+
+
+
+
 </body>
 
 </html>
