@@ -8,8 +8,8 @@ class CallSerializer(ModelSerializer):
     Standard serializer for the Call model.
     """
 
-    interpreter = SerializerMethodField(read_only=True)
-    work_day = SerializerMethodField(read_only=True)
+    #interpreter = SerializerMethodField(read_only=True)
+    #work_day = SerializerMethodField(read_only=True)
 
     class Meta:
         model = Call
@@ -28,17 +28,17 @@ class CallSerializer(ModelSerializer):
             "work_day": {"required": True, "error_messages": {"required": _("Work_day is required.")}}
         }
 
-    def get_interpreter(self, obj):
-        """
-        Returns the username of the interpreter associated with the call.
-        """
-        return obj.interpreter.username if obj.interpreter else None
+    #def get_interpreter(self, obj):
+    #    """
+    #    Returns the username of the interpreter associated with the call.
+    #    """
+    #    return obj.interpreter.username if obj.interpreter else None
     
-    def get_work_day(self, obj):
-        """
-        Returns the ID of the work day associated with the call.
-        """
-        return obj.work_day.call_start if obj.work_day else None
+    #def get_work_day(self, obj):
+    #    """
+    #    Returns the ID of the work day associated with the call.
+    #    """
+        #return obj.work_day.call_start if obj.work_day else None
 
 class WorkDaySerializer(ModelSerializer):
     """

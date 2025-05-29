@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.timezone import now, localtime
 
 from django.core.paginator import Paginator
 
@@ -22,6 +23,7 @@ category_options_endpoint = "http://localhost:8000/api/category_options/"
 individual_description_endpoint = "http://localhost:8000/api/individual_description/"
 
 
+
 # Create your views here.
 
 
@@ -29,30 +31,63 @@ individual_description_endpoint = "http://localhost:8000/api/individual_descript
 #@login_required
 def dashboard(request):
     if request.COOKIES.get("auth_token"):
+        bogota_time = localtime(now())
+        work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{bogota_time.date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
+        active_call_list_response = requests.get(url=retrieve_active_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get('auth_token')}"}, timeout=2)
+
+        if active_call_list_response.status_code != 200:
+            for value in active_call_list_response.json().values():
+                messages.error(request, value)
+
+        if work_day_response.status_code != 200:
+            for value in work_day_response.json().values():
+                messages.error(request, value)
         call = None
         if request.method == "POST":
             if request.POST.get("word_search"):
                 return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
             elif request.POST.get("btn_set_active_call"):
                 # This will create a new call.
-                work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{timezone.now().date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
                 if work_day_response.status_code != 200:
+                    print("work_day status code is not 200")
                     for value in work_day_response.json().values():
                         messages.error(request, value)
                 else:
-                    ### TOMORROW I HAVE TO FIX THE REST OF THIS LOGIC
+                    print("work day status code is 200")
                     call_response = requests.post(url=create_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, data={"active":True, "work_day":work_day_response.json()["id"], "interpreter":request.user.id}, timeout=2)
                     if call_response.status_code != 201:
-                        messages.error(request, "There was an error creating the call. Please try again later.")
+                        print("call response is not 201")
+                        for value in call_response.json().values():
+                            messages.error(request, value)
                         print(call)
                     else:
+                        print("call response is not 201")
                         call = call_response.json()
                         print(call)
+            elif request.POST.get("btn_set_inactive_call"):
+                # This will make set the current call to active = False and set the call_end = timezone.now()
+                active_call = active_call_list_response.json()[0]
+                print(f"The call id is {active_call["id"]}")
+                call_inactive_response = requests.patch(url=set_call_to_inactive + active_call["id"] + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, data={"active":False, "call_end":timezone.now()}, timeout=2)
+                if call_inactive_response.status_code != 200:
+                    for value in call_inactive_response.json().values():
+                        messages.error(request, value)
+                else:
+                    call = call_inactive_response.json()
+                    print(call)
+
         token = request.COOKIES.get("auth_token")
         headers = {"Authorization":f"Token {token}"}
         last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
         categories_dict = requests.get(url=category_options_endpoint, headers=headers, timeout=2).json()
-        the_render = render(request, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict, "call":call})
+
+        # Here we make sure, if we have an active call, we use it, else we provide whatever value "call" had.
+        if call == None and active_call_list_response.status_code == 200 and len(active_call_list_response.json()) > 0:
+            call = active_call_list_response.json()[0]
+            the_render = render(request, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict, "call":call})
+        else:
+            the_render = render(request, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict, "call":call})
+
         the_render.set_cookie("auth_token", token, httponly=True)
         return the_render
     else:

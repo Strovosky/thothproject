@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from django.utils import timezone
-from django.utils.timezone import make_aware
+from django.utils.timezone import make_aware, now, localtime
 
 from main.models import Definition, Category, English, Spanish, Abbreviation
 from rest_framework.authtoken.models import Token
@@ -20,7 +20,7 @@ from budget.models import WorkMonth, WorkDay, Call
 from budget.serializers import CallSerializer, WorkMonthSerializer, WorkDaySerializer
 
 # To create generic API VIEWS
-from rest_framework.generics import CreateAPIView, UpdateAPIView, RetrieveUpdateDestroyAPIView, GenericAPIView
+from rest_framework.generics import CreateAPIView, UpdateAPIView, RetrieveUpdateDestroyAPIView, GenericAPIView, RetrieveAPIView, ListAPIView
 from rest_framework.mixins import RetrieveModelMixin, DestroyModelMixin, ListModelMixin
 from rest_framework.mixins import CreateModelMixin
 
@@ -83,22 +83,23 @@ class AuthenticateInterpreterAPIView(APIView):
     
     def create_work_month(self, inter):
         """This function will create a new WorkMonth if it doesn't exist."""
+        bogota_time = localtime(now())
         if not WorkMonth.objects.filter(is_current=True, interpreter=inter).exists():
             # Create a new WorkMonth if it doesn't exist
-            if timezone.now().day >= 15:
+            if bogota_time.day >= 15:
                 # If today is after the 15th, create a new WorkMonth with end date on the 14th of the next month
                 current_month = WorkMonth.objects.create(
-                    start_date=timezone.now(),
-                    end_date=timezone.now().replace(day=14).replace(month=timezone.now().month + 1),
+                    start_date=bogota_time,
+                    end_date=bogota_time.replace(day=14).replace(month=bogota_time.month + 1),
                     is_current=True,
                     interpreter=inter
                     )
                 return current_month
-            elif timezone.now().day < 15:
+            elif bogota_time.day < 15:
                 # If today is before or on the 15th, create a new WorkMonth with end date on the 14th of the current month
                 current_month = WorkMonth.objects.create(
-                    start_date=timezone.now(),
-                    end_date=timezone.now().replace(day=14),
+                    start_date=bogota_time,
+                    end_date=bogota_time.replace(day=14),
                     is_current=True,
                     interpreter=inter
                     )
@@ -109,7 +110,7 @@ class AuthenticateInterpreterAPIView(APIView):
             current_month = WorkMonth.objects.filter(is_current=True, interpreter=inter)
             if current_month.count() > 1:
                 for c_month in WorkMonth.objects.filter(is_current=True, interpreter=inter):
-                    if not c_month.end_date or c_month.end_date < timezone.now():
+                    if not c_month.end_date or c_month.end_date < bogota_time.now():
                         c_month.is_current = False
                         c_month.save()
             elif not WorkMonth.objects.filter(is_current=True, interpreter=inter).exists():
@@ -122,6 +123,7 @@ class AuthenticateInterpreterAPIView(APIView):
         """
         This function will create a new WorkDay if it doesn't exist for the current WorkMonth.
         """
+        bogota_time = localtime(now())
         current_work_month = self.create_work_month(inter)
         current_work_day = WorkDay.objects.filter(active=True, interpreter=inter)
         if not current_work_day.exists():
@@ -131,13 +133,13 @@ class AuthenticateInterpreterAPIView(APIView):
                 work_month=current_work_month,
                 interpreter=inter,
             )
-            print(f"Work day created: {timezone.now().date()} for month {current_work_month.start_date} - {current_work_month.end_date}")
+            print(f"Work day created: {bogota_time.date()} for month {current_work_month.start_date} - {current_work_month.end_date}")
         else:
             # If a WorkDay already exists and is active, we'll check if it's day_end is older than today, if so...
             # we'll set it is_active to False and create a new WorkDay.
             if current_work_day.count() > 1:
                 for c_day in WorkDay.objects.filter(active=True, interpreter=inter):
-                    if c_day.day_end < timezone.now():
+                    if c_day.day_end < bogota_time:
                         c_day.active = False
                         c_day.save()
             if not current_work_day.exists():
@@ -248,6 +250,43 @@ class CreateCallAPIView(CreateAPIView):
     serializer_class = CallSerializer
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
+
+class RetriveActiveCallAPIView(ListAPIView):
+    """
+    This API view will retrive the active call for the current user.
+    """
+    queryset = Call.objects.filter(active=True)
+    serializer_class = CallSerializer
+
+    authentication_classes = [TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+class UpdateActiveCallAPIView(UpdateAPIView):
+    """
+    This view will update the call.
+    """
+    queryset = Call.objects.all()
+    serializer_class = CallSerializer
+    authentication_classes = [TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+    lookup_field = "pk"
+
+    def get_queryset(self):
+        """
+        Get the list of items for this view.
+        This must be overridden to provide a queryset.
+        """
+        if not self.request.user.is_authenticated:
+            return Call.objects.none()
+        if self.queryset is not None:
+            return self.queryset.filter(interpreter=self.request.user)
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must define a queryset or override get_queryset()."
+        )
+    
+
+
+
 
 class RetriveyWorkDayAPIView(RetrieveModelMixin, GenericAPIView):
     """
