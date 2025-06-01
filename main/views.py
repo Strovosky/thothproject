@@ -26,23 +26,57 @@ individual_description_endpoint = "http://localhost:8000/api/individual_descript
 
 # Create your views here.
 
+def data_info_setter(w_d=None, c=None, ten_def=None, cat_dict=None):
+    """
+    This functions will verify that the endpoints are in 200/201 or else they'll be passed as None
+    """
+    data_info = {"last_10_definitions":None, "categories_dict":None, "call":None, "work_day":None}
+    if w_d != None:
+        data_info["work_day"] = w_d
+    if c != None:
+        data_info["call"] = c
+    if ten_def != None:
+        data_info["last_10_definitions"] = ten_def
+    if cat_dict != None:
+        data_info["categories_dict"] = cat_dict
+
+    return data_info
 
 
-#@login_required
+
+
 def dashboard(request):
     if request.COOKIES.get("auth_token"):
-        bogota_time = localtime(now())
-        work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{bogota_time.date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
+        work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{timezone.now().date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
         active_call_list_response = requests.get(url=retrieve_active_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get('auth_token')}"}, timeout=2)
+        call, work_day = None, None
 
         if active_call_list_response.status_code != 200:
             for value in active_call_list_response.json().values():
                 messages.error(request, value)
+        else:
+            # Si sí hay llamadas hoy, pero todas son inactivas, pasaremos la última llamada inactiva a call.
+            if len(active_call_list_response.json()) == 0:
+                last_inactive_call_response = requests.get(url=last_inactive_call, headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
+                if last_inactive_call_response.status_code != 200:
+                    for value in last_inactive_call_response.json().values():
+                        messages.add_message(request, messages.ERROR, value)
+                else:
+                    # Si las llamadas inactivas tambien son 0, entonces no hay llamadas
+                    if len(last_inactive_call_response.json()) > 0:
+                        call = last_inactive_call_response.json()[-1]
+            else:
+                call = active_call_list_response.json()[-1]
 
         if work_day_response.status_code != 200:
             for value in work_day_response.json().values():
+                print(work_day_response.json())
                 messages.error(request, value)
-        call = None
+        else:
+            print("Workday was passed.")
+            work_day = work_day_response.json()
+
+
         if request.method == "POST":
             if request.POST.get("word_search"):
                 return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
@@ -52,7 +86,11 @@ def dashboard(request):
                     print("work_day status code is not 200")
                     for value in work_day_response.json().values():
                         messages.error(request, value)
+                elif active_call_list_response.status_code == 200:
+                    call = active_call_list_response.json()[-1]
+                    print("work day was taken from active call list and is 200")
                 else:
+                    work_day = work_day_response.json()
                     print("work day status code is 200")
                     call_response = requests.post(url=create_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, data={"active":True, "work_day":work_day_response.json()["id"], "interpreter":request.user.id}, timeout=2)
                     if call_response.status_code != 201:
@@ -65,10 +103,10 @@ def dashboard(request):
                         call = call_response.json()
                         print(call)
             elif request.POST.get("btn_set_inactive_call"):
-                # This will make set the current call to active = False and set the call_end = timezone.now()
-                active_call = active_call_list_response.json()[0]
+                # This will make set the current call to active = False and set the call_end = bogota_time
+                active_call = active_call_list_response.json()[-1]
                 print(f"The call id is {active_call["id"]}")
-                call_inactive_response = requests.patch(url=set_call_to_inactive + active_call["id"] + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, data={"active":False, "call_end":timezone.now()}, timeout=2)
+                call_inactive_response = requests.patch(url=set_call_to_inactive + str(active_call["id"]) + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, data={"active":False, "call_end":timezone.now()}, timeout=2)
                 if call_inactive_response.status_code != 200:
                     for value in call_inactive_response.json().values():
                         messages.error(request, value)
@@ -81,13 +119,10 @@ def dashboard(request):
         last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
         categories_dict = requests.get(url=category_options_endpoint, headers=headers, timeout=2).json()
 
-        # Here we make sure, if we have an active call, we use it, else we provide whatever value "call" had.
-        if call == None and active_call_list_response.status_code == 200 and len(active_call_list_response.json()) > 0:
-            call = active_call_list_response.json()[0]
-            the_render = render(request, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict, "call":call})
-        else:
-            the_render = render(request, "main/dashboard.html", {"last_10_definitions":last_10_definitions, "categories_dict":categories_dict, "call":call})
+        data_info = data_info_setter(w_d=work_day, c=call, ten_def=last_10_definitions, cat_dict=categories_dict)
 
+        # Here we make sure, if we have an active call, we use it, else we provide whatever value "call" had.
+        the_render = render(request, "main/dashboard.html", data_info)
         the_render.set_cookie("auth_token", token, httponly=True)
         return the_render
     else:

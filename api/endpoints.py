@@ -13,6 +13,7 @@ retrieve_update_destroy_interpreter_endpoint = "http://localhost:8000/api/create
 create_call_endpoint = "http://localhost:8000/api/create_call/"
 retrieve_active_call_endpoint = base_url + "retrive_active_call/"
 set_call_to_inactive = base_url + "set_call_to_inactive/"
+last_inactive_call = base_url + "last_inactive_call/"
 
 # WorkDay endpoints
 retrieve_work_day_endpoint = "http://localhost:8000/api/retrive_work_day/"

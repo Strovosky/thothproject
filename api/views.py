@@ -83,26 +83,27 @@ class AuthenticateInterpreterAPIView(APIView):
     
     def create_work_month(self, inter):
         """This function will create a new WorkMonth if it doesn't exist."""
-        bogota_time = localtime(now())
         if not WorkMonth.objects.filter(is_current=True, interpreter=inter).exists():
             # Create a new WorkMonth if it doesn't exist
-            if bogota_time.day >= 15:
+            if timezone.now().day >= 15:
                 # If today is after the 15th, create a new WorkMonth with end date on the 14th of the next month
                 current_month = WorkMonth.objects.create(
-                    start_date=bogota_time,
-                    end_date=bogota_time.replace(day=14).replace(month=bogota_time.month + 1),
+                    start_date=timezone.now(),
+                    end_date=timezone.now().replace(day=14).replace(month=timezone.now().month + 1),
                     is_current=True,
                     interpreter=inter
                     )
+                print(f"New month created: {current_month}")
                 return current_month
-            elif bogota_time.day < 15:
+            elif timezone.now().day < 15:
                 # If today is before or on the 15th, create a new WorkMonth with end date on the 14th of the current month
                 current_month = WorkMonth.objects.create(
-                    start_date=bogota_time,
-                    end_date=bogota_time.replace(day=14),
+                    start_date=timezone.now(),
+                    end_date=timezone.now().replace(day=14),
                     is_current=True,
                     interpreter=inter
                     )
+                print(f"New month created: {current_month}")
                 return current_month
         else:
             # If a WorkMonth already exists and is active. We'll check if it's end_date is older than today, if so...
@@ -110,12 +111,13 @@ class AuthenticateInterpreterAPIView(APIView):
             current_month = WorkMonth.objects.filter(is_current=True, interpreter=inter)
             if current_month.count() > 1:
                 for c_month in WorkMonth.objects.filter(is_current=True, interpreter=inter):
-                    if not c_month.end_date or c_month.end_date < bogota_time.now():
+                    if not c_month.end_date or c_month.end_date < timezone.now():
                         c_month.is_current = False
                         c_month.save()
             elif not WorkMonth.objects.filter(is_current=True, interpreter=inter).exists():
                 self.create_work_month()
             else:
+                print(f"The current month is the same one: {current_month.first()}")
                 return current_month.first()
             
     
@@ -123,29 +125,37 @@ class AuthenticateInterpreterAPIView(APIView):
         """
         This function will create a new WorkDay if it doesn't exist for the current WorkMonth.
         """
-        bogota_time = localtime(now())
         current_work_month = self.create_work_month(inter)
         current_work_day = WorkDay.objects.filter(active=True, interpreter=inter)
-        if not current_work_day.exists():
+        if current_work_day.count() == 0:
             # Create a new WorkDay if it doesn't exist
-            WorkDay.objects.create(
+            work_day =WorkDay.objects.create(
                 active=True,
                 work_month=current_work_month,
                 interpreter=inter,
             )
-            print(f"Work day created: {bogota_time.date()} for month {current_work_month.start_date} - {current_work_month.end_date}")
+            print(f"Work day created: {work_day} for month {current_work_month.start_date} - {current_work_month.end_date}")
+        # If a WorkDay already exists and is active, we'll check if it's day_end is older than today, if so...
+        # we'll set it is_active to False and create a new WorkDay.
+        elif current_work_day.count() > 1:
+            for c_day in current_work_day:
+                c_day.active = False ### TAMBIEN TENGO QUE PONERLE EN c_day.day_end ###
+                c_day.save()
+            self.create_work_day(inter)
         else:
-            # If a WorkDay already exists and is active, we'll check if it's day_end is older than today, if so...
-            # we'll set it is_active to False and create a new WorkDay.
-            if current_work_day.count() > 1:
-                for c_day in WorkDay.objects.filter(active=True, interpreter=inter):
-                    if c_day.day_end < bogota_time:
-                        c_day.active = False
-                        c_day.save()
-            if not current_work_day.exists():
-                self.create_work_day()
-            if current_work_day.count() == 1:
+            # IF a WorkDay already exists, we'll verify if the date is the same as today's.
+            print(f"This is WorkDay date {current_work_day.first().day_start.date()} and this is today's {timezone.now().date()}")
+            if current_work_day.first().day_start.date() == timezone.now().date():
+                # If it's the same, we get that day.
+                print(f"Current work_day obteined: {current_work_day.first()}")
                 return current_work_day.first()
+            else:
+                # If not the same, we set active = False and create the new day.
+                c_day = current_work_day.first()
+                c_day.active = False
+                c_day.save()
+                print(f"{c_day} is suppossed to be changed.")
+                self.create_work_day(inter)
                     
 
                     
@@ -305,17 +315,20 @@ class RetriveyWorkDayAPIView(RetrieveModelMixin, GenericAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         today = self.kwargs.get("day_start")
-        #utc_today = make_aware(timezone.datetime.combine(today, timezone.datetime.min.time()))
-        day_work = self.queryset.filter(active=True, interpreter=self.request.user).first()
-        if str(day_work.day_start.date()) == today:
-            # If the active day_work is today, we serialize it and return it.
-            serialized_day_work = self.get_serializer(day_work).data
-            return Response(serialized_day_work, status=status.HTTP_200_OK)
+        #day_work = self.queryset.filter(day_start__date=today, interpreter=self.request.user)
+        day_work = self.queryset.filter(active=True, interpreter=self.request.user)
+        if day_work.count() == 1:
+            if str(day_work.first().day_start.date()) == str(today):
+                # If the active day_work is today, we serialize it and return it.
+                serialized_day_work = self.get_serializer(day_work.first()).data
+                return Response(serialized_day_work, status=status.HTTP_200_OK)
+            else:
+                return(Response({"error":f"day_start {day_work.first().day_start.date()} and {today} are different"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR))
+        elif day_work.count() > 1:
+            return Response({"error":f"More than one day with the date {today}."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             # Else, we serialize an empty WorkDay.
-            day_work = self.queryset.filter(day_start=None, interpreter=self.request.user).first()
-            serialized_day_work = self.get_serializer(day_work).data
-            return Response(serialized_day_work, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error":f"No work_day found with date {today}"}, status=status.HTTP_404_NOT_FOUND)
 
 
     def get(self, request, *args, **kwargs):
@@ -331,6 +344,25 @@ class RetriveDestroyWorkMonthAPIView(RetrieveUpdateDestroyAPIView):
     lookup_field = "is_current"
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
+
+
+
+class LastInactiveCallAPIView(ListAPIView):
+    """
+    This APIView will return the last inactive call for the current user.
+    """
+
+    queryset = Call.objects.filter(active=False)
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = CallSerializer
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset().filter(interpreter=request.user)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+
 
 
 """ THIS ONE IS ONLY A TEST

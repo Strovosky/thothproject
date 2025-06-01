@@ -278,7 +278,28 @@
             </div>
           </div>
         </div-->
-        {% if not call or not call.active %}
+        {% if not call %}
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+          <div class="card">
+            <div class="card-header p-3 pt-2">
+              <form method="post" action="">
+                {% csrf_token %}
+                <button type="submit" name="btn_no_call" class="icon icon-lg icon-shape bg-gradient-primary shadow-primary text-center border-radius-xl mt-n4 position-absolute" value="set_active">
+                  <i class="material-icons opacity-10">person</i>
+                </button>
+              </form>
+              <div class="text-end pt-1">
+                <h4 class="text-sm mb-0 text-capitalize">No Active Call</h4>
+                <p class="mb-0">No Hay Llamadas Aún Hoy</p>
+              </div>
+            </div>
+            <hr class="dark horizontal my-0">
+            <div class="card-footer p-3">
+              <p class="mb-0">Llamadas completadas hoy: <span class="text-success text-sm font-weight-bolder">0</span></p>
+            </div>
+          </div>
+        </div>
+        {% elif call.active == False %}
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-3 pt-2">
@@ -289,13 +310,13 @@
                 </button>
               </form>
               <div class="text-end pt-1">
-                <h4 class="text-sm mb-0 text-capitalize">No Active Call</h4>
-                <p class="mb-0">Hora Última llamada</p>
+                <h4 class="text-sm mb-0 text-capitalize">Last Call Ended</h4>
+                <p class="mb-0">{{call.call_end_local_time}}</p>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-3">
-              <p class="mb-0">Llamadas completadas hoy: <span class="text-success text-sm font-weight-bolder">5</span></p>
+              <p class="mb-0">Llamadas completadas hoy: <span class="text-success text-sm font-weight-bolder">{{work_day.num_calls}}</span></p>
             </div>
           </div>
         </div>
@@ -315,12 +336,12 @@
               </form>
               <div class="text-end pt-1">
                 <h4 class="text-sm mb-0 text-capitalize">Active Call</h4>
-                <p class="mb-0">Hora llamada iniciada</p>
+                <p class="mb-0">{{call.call_end.date}}</p>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-3">
-              <p class="mb-0">Llamada número <span class="text-success text-sm font-weight-bolder">6</span> hoy.</p>
+              <p class="mb-0">Llamada número <span class="text-success text-sm font-weight-bolder">{{work_day.calls.count}}</span> hoy.</p>
             </div>
           </div>
         </div>

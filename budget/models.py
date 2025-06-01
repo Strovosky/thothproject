@@ -1,11 +1,13 @@
 from django.db.models import Model, CharField, IntegerField, ForeignKey, CASCADE, BooleanField, DateTimeField
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.utils.timezone import now, localtime
 
 from interpreter.models import Interpreter
 
 # Create your models here.
 
+bogota_time = localtime(now())
 
 
 class WorkMonth(Model):
