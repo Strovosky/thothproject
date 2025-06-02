@@ -24,7 +24,43 @@ individual_description_endpoint = "http://localhost:8000/api/individual_descript
 
 
 
-# Create your views here.
+# Create useful functions here
+
+def call_workday_retriever(request):
+    """
+    This function will retrive the requests responses for the call, and work_day
+    """
+    work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{timezone.now().date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
+    active_call_list_response = requests.get(url=retrieve_active_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get('auth_token')}"}, timeout=2)
+
+    if work_day_response.status_code != 200:
+        for value in work_day_response.json().values():
+            messages.error(request, value)
+            return None, None
+    else:
+        w_d = work_day_response.json()
+        if active_call_list_response.status_code != 200:
+            for value in active_call_list_response.json().values():
+                messages.error(request, value)
+                return None, None
+        else:
+            # Si sí hay llamadas hoy, pero todas son inactivas, pasaremos la última llamada inactiva a call.
+            if len(active_call_list_response.json()) == 0:
+                last_inactive_call_response = requests.get(url=last_inactive_call, headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
+                if last_inactive_call_response.status_code != 200:
+                    for value in last_inactive_call_response.json().values():
+                        messages.add_message(request, messages.ERROR, value)
+                        return None, None
+                else:
+                    if len(last_inactive_call_response.json()) > 0:
+                        c = last_inactive_call_response.json()[-1]
+                        return c, w_d
+                    # Si las llamadas inactivas tambien son 0, entonces no hay llamadas
+                    else:
+                        return None, w_d
+            else:
+                c = active_call_list_response.json()[-1]
+                return c, w_d
 
 def data_info_setter(w_d=None, c=None, ten_def=None, cat_dict=None):
     """
@@ -46,80 +82,40 @@ def data_info_setter(w_d=None, c=None, ten_def=None, cat_dict=None):
 
 
 def dashboard(request):
-    if request.COOKIES.get("auth_token"):
-        work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{timezone.now().date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
-        active_call_list_response = requests.get(url=retrieve_active_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get('auth_token')}"}, timeout=2)
-        call, work_day = None, None
-
-        if active_call_list_response.status_code != 200:
-            for value in active_call_list_response.json().values():
-                messages.error(request, value)
-        else:
-            # Si sí hay llamadas hoy, pero todas son inactivas, pasaremos la última llamada inactiva a call.
-            if len(active_call_list_response.json()) == 0:
-                last_inactive_call_response = requests.get(url=last_inactive_call, headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
-                if last_inactive_call_response.status_code != 200:
-                    for value in last_inactive_call_response.json().values():
-                        messages.add_message(request, messages.ERROR, value)
-                else:
-                    # Si las llamadas inactivas tambien son 0, entonces no hay llamadas
-                    if len(last_inactive_call_response.json()) > 0:
-                        call = last_inactive_call_response.json()[-1]
-            else:
-                call = active_call_list_response.json()[-1]
-
-        if work_day_response.status_code != 200:
-            for value in work_day_response.json().values():
-                print(work_day_response.json())
-                messages.error(request, value)
-        else:
-            print("Workday was passed.")
-            work_day = work_day_response.json()
-
-
+    token = request.COOKIES.get("auth_token")
+    headers = {"Authorization":f"Token {token}"}
+    if token:
+        call, work_day = call_workday_retriever(request) # The values will be passed in the order: call (first), work_day (second)
         if request.method == "POST":
             if request.POST.get("word_search"):
                 return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
-            elif request.POST.get("btn_set_active_call"):
-                # This will create a new call.
-                if work_day_response.status_code != 200:
-                    print("work_day status code is not 200")
-                    for value in work_day_response.json().values():
+            elif request.POST.get("btn_set_active_call") or request.POST.get("btn_no_call"):
+                # If there isn't a call and there's a work_day, we create a new call
+                print("btn was pressed")
+                call_response = requests.post(url=create_call_endpoint, headers=headers, data={"active":True, "work_day":work_day["id"], "interpreter":request.user.id}, timeout=2)
+                if call_response.status_code != 201:
+                    for value in call_response.json().values():
                         messages.error(request, value)
-                elif active_call_list_response.status_code == 200:
-                    call = active_call_list_response.json()[-1]
-                    print("work day was taken from active call list and is 200")
                 else:
-                    work_day = work_day_response.json()
-                    print("work day status code is 200")
-                    call_response = requests.post(url=create_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, data={"active":True, "work_day":work_day_response.json()["id"], "interpreter":request.user.id}, timeout=2)
-                    if call_response.status_code != 201:
-                        print("call response is not 201")
-                        for value in call_response.json().values():
-                            messages.error(request, value)
-                        print(call)
-                    else:
-                        print("call response is not 201")
-                        call = call_response.json()
-                        print(call)
+                    call = call_response.json()
+                    print(call)
             elif request.POST.get("btn_set_inactive_call"):
                 # This will make set the current call to active = False and set the call_end = bogota_time
-                active_call = active_call_list_response.json()[-1]
-                print(f"The call id is {active_call["id"]}")
-                call_inactive_response = requests.patch(url=set_call_to_inactive + str(active_call["id"]) + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, data={"active":False, "call_end":timezone.now()}, timeout=2)
-                if call_inactive_response.status_code != 200:
-                    for value in call_inactive_response.json().values():
-                        messages.error(request, value)
-                else:
-                    call = call_inactive_response.json()
-                    print(call)
+                if call["active"] == True:
+                    print(f"The call id is {call["id"]}")
+                    set_call_inactive_response = requests.patch(url=set_call_to_inactive + str(call["id"]) + "/", headers=headers, data={"active":False, "call_end":timezone.now()}, timeout=2)
+                    if set_call_inactive_response.status_code != 200:
+                        for value in set_call_inactive_response.json().values():
+                            messages.error(request, value)
+                    else:
+                        call = set_call_inactive_response.json()
+                        print(call)
 
-        token = request.COOKIES.get("auth_token")
-        headers = {"Authorization":f"Token {token}"}
         last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
         categories_dict = requests.get(url=category_options_endpoint, headers=headers, timeout=2).json()
 
         data_info = data_info_setter(w_d=work_day, c=call, ten_def=last_10_definitions, cat_dict=categories_dict)
+        print(work_day)
 
         # Here we make sure, if we have an active call, we use it, else we provide whatever value "call" had.
         the_render = render(request, "main/dashboard.html", data_info)
@@ -228,16 +224,25 @@ def edit_word(response, id_definition: int):
 
 @login_required
 def word_search(response, word: str):
+    call, work_day = call_workday_retriever(response)
     if response.method == "POST":
         if response.POST.get("word_search"):
             return HttpResponseRedirect(reverse("dashboard_urls:word_search", args=(str(response.POST.get("word_search")).lower(),)))
+
     definitions = Definition.objects.filter(Q(english__name__contains=word) | Q(spanish__name__contains=word) | Q(abbreviation__text__contains=word.upper())).distinct()
     pagination = Paginator(definitions, 10)
     page = response.GET.get("page")
     paginated_definitions = pagination.get_page(page)
+
     last_10_definitions = requests.get(url=last_10_definitions_endpoint, timeout=2).json()
     categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
-    return render(response, "main/word_search.html", {"definitions":paginated_definitions, "word_to_find":word, "categories_dict":categories_dict, "pagination":pagination, "last_10_definitions":last_10_definitions})
+
+    data_info = data_info_setter(w_d=work_day, c=call, ten_def=last_10_definitions, cat_dict=categories_dict)
+    data_info["word_to_find"] = word
+    data_info["definitions"] = paginated_definitions
+    data_info["pagination"] = pagination
+
+    return render(response, "main/word_search.html", data_info)
 
 
 
