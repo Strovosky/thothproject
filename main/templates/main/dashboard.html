@@ -37,7 +37,7 @@
   <!-- CSS Files -->
   <link id="pagestyle" href="{% static 'css/material-dashboard.css' %}" rel="stylesheet" />
 </head>
-{% endblock %}
+{% endblock head %}
 
 <body class="g-sidenav-show  bg-gray-200">
   {% block sidebar %}
@@ -135,7 +135,7 @@
       </div>
     </div>
   </aside>
-  {% endblock %}
+  {% endblock sidebar %}
   <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg ">
     <!-- Navbar -->
      {% block navbar %}
@@ -256,7 +256,7 @@
         </div>
       </div>
     </nav>
-    {% endblock %}
+    {% endblock navbar %}
     <!-- End Navbar -->
     <div class="container-fluid py-4">
       {% block small_notes %}
@@ -320,6 +320,14 @@
             </div>
           </div>
         </div>
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+          <div class="card" style="width: 100%; max-width: 300px;">
+            <div class="card-header p-3 pt-2 text-center">
+              <h4 class="text-sm mb-0 text-capitalize">Time Worked Today</h4>
+              <p class="mb-0"><span style="font-size: 24px; font-weight: bold;">{{work_day.time_worked}}</span></p>
+            </div>
+          </div>
+        </div>
         <script>
           // Reset stopwatch when call becomes inactive
           localStorage.removeItem("stopwatchStartTime");
@@ -335,13 +343,13 @@
                 </button>
               </form>
               <div class="text-end pt-1">
-                <h4 class="text-sm mb-0 text-capitalize">Active Call</h4>
-                <p class="mb-0">{{call.call_end.date}}</p>
+                <h4 class="text-sm mb-0 text-capitalize">Active Call Started At</h4>
+                <p class="mb-0">{{call.call_start_local_time}}</p>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-3">
-              <p class="mb-0">Llamada número <span class="text-success text-sm font-weight-bolder">{{work_day.num_calls}}</span> hoy.</p>
+              <p class="mb-0">Llamada número <span class="text-success text-sm font-weight-bolder">{{work_day.num_calls|add:1}}</span> hoy.</p>
             </div>
           </div>
         </div>

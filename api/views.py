@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from django.utils import timezone
-from django.utils.timezone import make_aware, now, localtime
+from django.utils.timezone import make_aware, now, localtime, localtime
 
 from main.models import Definition, Category, English, Spanish, Abbreviation
 from rest_framework.authtoken.models import Token
@@ -74,32 +74,30 @@ def create_english_word(request):
 
 
 class AuthenticateInterpreterAPIView(APIView):
-    """This view will will authenticate the user and return the token."""
-
-
     """
-    This part of the code will verify if there's a current WorkMonth and WorkDay already created, else it will create a new one.
+    This view will authenticate the user and return the token. I will also create a WorkMonth and WorkDay if required.
     """
     
     def create_work_month(self, inter):
         """This function will create a new WorkMonth if it doesn't exist."""
-        if not WorkMonth.objects.filter(is_current=True, interpreter=inter).exists():
+        current_month = WorkMonth.objects.filter(is_current=True, interpreter=inter)
+        if not current_month.exists():
             # Create a new WorkMonth if it doesn't exist
-            if timezone.now().day >= 15:
+            if localtime(timezone.now()).day >= 15:
                 # If today is after the 15th, create a new WorkMonth with end date on the 14th of the next month
                 current_month = WorkMonth.objects.create(
                     start_date=timezone.now(),
-                    end_date=timezone.now().replace(day=14).replace(month=timezone.now().month + 1),
+                    end_date=localtime(timezone.now()).replace(day=14).replace(month=localtime(timezone.now()).month + 1),
                     is_current=True,
                     interpreter=inter
                     )
                 print(f"New month created: {current_month}")
                 return current_month
-            elif timezone.now().day < 15:
+            elif localtime(timezone.now()).day < 15:
                 # If today is before or on the 15th, create a new WorkMonth with end date on the 14th of the current month
                 current_month = WorkMonth.objects.create(
                     start_date=timezone.now(),
-                    end_date=timezone.now().replace(day=14),
+                    end_date=localtime(timezone.now()).replace(day=14),
                     is_current=True,
                     interpreter=inter
                     )
@@ -108,13 +106,12 @@ class AuthenticateInterpreterAPIView(APIView):
         else:
             # If a WorkMonth already exists and is active. We'll check if it's end_date is older than today, if so...
             # we'll set it is_current to False and create a new WorkMonth.
-            current_month = WorkMonth.objects.filter(is_current=True, interpreter=inter)
             if current_month.count() > 1:
-                for c_month in WorkMonth.objects.filter(is_current=True, interpreter=inter):
-                    if not c_month.end_date or c_month.end_date < timezone.now():
+                for c_month in current_month:
+                    if not localtime(c_month.end_date) or localtime(c_month.end_date) < localtime(timezone.now()):
                         c_month.is_current = False
                         c_month.save()
-            elif not WorkMonth.objects.filter(is_current=True, interpreter=inter).exists():
+            elif not current_month.exists():
                 self.create_work_month()
             else:
                 print(f"The current month is the same one: {current_month.first()}")
@@ -139,13 +136,13 @@ class AuthenticateInterpreterAPIView(APIView):
         # we'll set it is_active to False and create a new WorkDay.
         elif current_work_day.count() > 1:
             for c_day in current_work_day:
-                c_day.active = False ### TAMBIEN TENGO QUE PONERLE EN c_day.day_end ###
+                c_day.active = False
                 c_day.save()
             self.create_work_day(inter)
         else:
             # IF a WorkDay already exists, we'll verify if the date is the same as today's.
             print(f"This is WorkDay date {current_work_day.first().day_start.date()} and this is today's {timezone.now().date()}")
-            if current_work_day.first().day_start.date() == timezone.now().date():
+            if localtime(current_work_day.first().day_start).date() == localtime(timezone.now()).date():
                 # If it's the same, we get that day.
                 print(f"Current work_day obteined: {current_work_day.first()}")
                 return current_work_day.first()
@@ -156,8 +153,6 @@ class AuthenticateInterpreterAPIView(APIView):
                 c_day.save()
                 print(f"{c_day} is suppossed to be changed.")
                 self.create_work_day(inter)
-                    
-
                     
 
     def post(self, request, *args, **kwargs):
@@ -179,9 +174,6 @@ class AuthenticateInterpreterAPIView(APIView):
         response = Response({"token":token.key, "interpreter_id":interpreter.id}, status=status.HTTP_200_OK)
         response.set_cookie('auth_token', token.key, httponly=True)
         return response
-
-        
-
 
 class DestroyCurrentToken(APIView):
     """This API View will destroy the token when the user does a logout. """
@@ -293,10 +285,6 @@ class UpdateActiveCallAPIView(UpdateAPIView):
         raise NotImplementedError(
             f"{self.__class__.__name__} must define a queryset or override get_queryset()."
         )
-    
-
-
-
 
 class RetriveyWorkDayAPIView(RetrieveModelMixin, GenericAPIView):
     """
@@ -315,15 +303,14 @@ class RetriveyWorkDayAPIView(RetrieveModelMixin, GenericAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         today = self.kwargs.get("day_start")
-        #day_work = self.queryset.filter(day_start__date=today, interpreter=self.request.user)
         day_work = self.queryset.filter(active=True, interpreter=self.request.user)
         if day_work.count() == 1:
-            if str(day_work.first().day_start.date()) == str(today):
+            if str(localtime(day_work.first().day_start).date()) == str(today):
                 # If the active day_work is today, we serialize it and return it.
                 serialized_day_work = self.get_serializer(day_work.first()).data
                 return Response(serialized_day_work, status=status.HTTP_200_OK)
             else:
-                return(Response({"error":f"day_start {day_work.first().day_start.date()} and {today} are different"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR))
+                return(Response({"error":f"day_start {localtime(day_work.first().day_start).date()} and {today} are different"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR))
         elif day_work.count() > 1:
             return Response({"error":f"More than one day with the date {today}."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
@@ -334,7 +321,6 @@ class RetriveyWorkDayAPIView(RetrieveModelMixin, GenericAPIView):
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
     
-
 class RetriveDestroyWorkMonthAPIView(RetrieveUpdateDestroyAPIView):
     """
     This API view will retrieve or destroy a WorkMonth.
@@ -344,8 +330,6 @@ class RetriveDestroyWorkMonthAPIView(RetrieveUpdateDestroyAPIView):
     lookup_field = "is_current"
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
-
-
 
 class LastInactiveCallAPIView(ListAPIView):
     """

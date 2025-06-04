@@ -22,6 +22,7 @@ class CallSerializer(ModelSerializer):
             "call_start_local_time",
             "call_end",
             "call_end_local_time",
+            "time_call",
             "active",
             "note",
             "work_day",
@@ -38,7 +39,7 @@ class CallSerializer(ModelSerializer):
         Return the call_start but formatted for the local city.
         """
         local_time = localtime(obj.call_start)
-        return f"{local_time.strftime('%M/%Y/%D')} at {local_time.strftime('%H:%M:%S')}"
+        return f"{local_time.strftime('%B/%d/%y')} at {local_time.strftime('%l:%M:%p')}"
     
     def get_call_end_local_time(self, obj):
         """
@@ -69,6 +70,7 @@ class WorkDaySerializer(ModelSerializer):
     day_start_local = SerializerMethodField(read_only=True)
     day_end_local = SerializerMethodField(read_only=True)
     num_calls = SerializerMethodField(read_only=True)
+    time_worked = SerializerMethodField(read_only=True)
 
     class Meta:
         model = WorkDay
@@ -78,6 +80,7 @@ class WorkDaySerializer(ModelSerializer):
             "day_start_local",
             "day_end",
             "day_end_local",
+            "time_worked",
             "active",
             "work_month",
             "interpreter",
@@ -105,14 +108,14 @@ class WorkDaySerializer(ModelSerializer):
         """
         Returns the datetime the work_day started in local time.
         """
-        local_datetime = localdate(obj.day_start)
+        local_datetime = localtime(obj.day_start)
         return local_datetime
 
     def get_day_end_local(self, obj):
         """
         Returns the datetiem the work_day ended in local time
         """
-        local_datetime = localdate(obj.day_end)
+        local_datetime = localtime(obj.day_end)
         return local_datetime
     
     def get_num_calls(self, obj):
@@ -120,6 +123,15 @@ class WorkDaySerializer(ModelSerializer):
         Returns the number of calls a workday has.
         """
         return obj.calls.count()
+    
+    def get_time_worked(self, obj):
+        """
+        Returns the hours and minutes worked today.
+        """
+        seconds = obj.time_worked.seconds
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        return f"{hours}:{minutes}"
 
 class WorkMonthSerializer(ModelSerializer):
     """

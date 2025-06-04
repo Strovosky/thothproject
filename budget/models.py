@@ -33,13 +33,23 @@ class WorkDay(Model):
     This model represents a day of work.
     """
     day_start = DateTimeField(verbose_name=_("Call started at"), help_text=_("The time the current work day started."), auto_now_add=True)
-    day_end = DateTimeField(verbose_name=_("Call ended at"), help_text=_("The time the work day ended."), default=timezone.now().replace(hour=23, minute=59, second=59))
+    day_end = DateTimeField(verbose_name=_("Call ended at"), help_text=_("The time the work day ended."), default=localtime(timezone.now()).replace(hour=23, minute=59, second=59))
 
     active = BooleanField(verbose_name=_("Is_active?"), help_text=_("Is this day active?"), default=False)
 
     work_month = ForeignKey(WorkMonth, verbose_name=_("Work month"), help_text=_("The month this work day belongs to."), on_delete=CASCADE, related_name="work_days")
     interpreter = ForeignKey(Interpreter, verbose_name=_("Interpreter"), help_text=_("The interpreter who worked this day."), on_delete=CASCADE, related_name="work_days")
 
+    @property
+    def time_worked(self):
+        # This will show a timedelta of how many hours we worked today
+        total_time = None
+        for ind, call in enumerate(self.calls.all()):
+            if ind == 0:
+                total_time = call.time_call
+            else:
+                total_time += call.time_call
+        return total_time
 
     def __str__(self):
         return f"{self.interpreter.username}'s day worked on {self.day_start.strftime('%d/%m/%Y')}"
@@ -60,6 +70,9 @@ class Call(Model):
     work_day = ForeignKey(WorkDay, verbose_name=_("Work day"), help_text=_("The work day this call belongs to."), on_delete=CASCADE, related_name="calls")
     interpreter = ForeignKey(Interpreter, verbose_name=_("Interpreter"), help_text=_("The interpreter who made this call."), on_delete=CASCADE, related_name="calls")
 
+    @property
+    def time_call(self):
+        return self.call_end - self.call_start
 
     def __str__(self):
         return f"Call for {self.interpreter.username} at {self.call_start.strftime('%d/%m/%Y %H:%M')}"

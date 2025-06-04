@@ -30,7 +30,7 @@ def call_workday_retriever(request):
     """
     This function will retrive the requests responses for the call, and work_day
     """
-    work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{timezone.now().date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
+    work_day_response = requests.get(url=retrieve_work_day_endpoint + f"{localtime(timezone.now()).date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2)
     active_call_list_response = requests.get(url=retrieve_active_call_endpoint, headers={"Authorization":f"Token {request.COOKIES.get('auth_token')}"}, timeout=2)
 
     if work_day_response.status_code != 200:
@@ -102,12 +102,13 @@ def dashboard(request):
             elif request.POST.get("btn_set_inactive_call"):
                 # This will make set the current call to active = False and set the call_end = bogota_time
                 if call["active"] == True:
-                    print(f"The call id is {call["id"]}")
+                    print(f"La llamada esta activa? {call["active"]}")
                     set_call_inactive_response = requests.patch(url=set_call_to_inactive + str(call["id"]) + "/", headers=headers, data={"active":False, "call_end":timezone.now()}, timeout=2)
                     if set_call_inactive_response.status_code != 200:
                         for value in set_call_inactive_response.json().values():
                             messages.error(request, value)
                     else:
+                        print(f"La llamada esta activa? {call["active"]}")
                         call = set_call_inactive_response.json()
                         print(call)
 
@@ -115,7 +116,7 @@ def dashboard(request):
         categories_dict = requests.get(url=category_options_endpoint, headers=headers, timeout=2).json()
 
         data_info = data_info_setter(w_d=work_day, c=call, ten_def=last_10_definitions, cat_dict=categories_dict)
-        print(work_day)
+        print(type(work_day))
 
         # Here we make sure, if we have an active call, we use it, else we provide whatever value "call" had.
         the_render = render(request, "main/dashboard.html", data_info)
@@ -126,6 +127,11 @@ def dashboard(request):
 
 @login_required
 def new_word(request):
+    """
+    This view will render the template for creating a new word.
+    """
+    call, work_day = call_workday_retriever(request)
+
     if request.method == "POST":
         if request.POST.get("word_search"):
             return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
@@ -169,10 +175,18 @@ def new_word(request):
     headers = {"Authorization":f"Token {token}"}
     last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
     categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
-    return render(request, "main/new_word.html", {"category_object":Category.objects.all(), "category_dict":categories_dict, "last_10_definitions":last_10_definitions})
+
+    data_info = data_info_setter(w_d=work_day, c=call, ten_def=last_10_definitions, cat_dict=categories_dict)
+    data_info["category_object"] = Category.objects.all()
+
+    return render(request, "main/new_word.html", data_info)
 
 @login_required
 def word_description(response, id_definition: int):
+    """
+    This function will render the template that shows a specific word description
+    """
+    call, work_day = call_workday_retriever(response)
     if response.method == "POST":
         if response.POST.get("word_search"):
             return redirect(to="dashboard_urls:word_search", word=response.POST.get("word_search").lower())
@@ -181,10 +195,16 @@ def word_description(response, id_definition: int):
     definition = requests.get(url=individual_description_endpoint, headers=headers, params={"id_definition":id_definition}, timeout=2).json()
     last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
     categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
-    return render(response, "main/word.html", {"definition":definition, "last_10_definitions":last_10_definitions, "categories_dict":categories_dict})
+    info_dict = data_info_setter(w_d=work_day, c=call, ten_def=last_10_definitions, cat_dict=categories_dict)
+    info_dict["definition"] = definition
+    return render(response, "main/word.html", info_dict)
 
 @login_required
 def edit_word(response, id_definition: int):
+    """
+    This view will render the template for editing a word.
+    """
+    call, work_day = call_workday_retriever(response)
     definition = get_object_or_404(Definition, pk=id_definition)
     if response.method == "POST":
         if response.POST.get("word_search"):
@@ -220,7 +240,9 @@ def edit_word(response, id_definition: int):
     definition = requests.get(url=individual_description_endpoint, headers=headers, params={"id_definition":id_definition}).json()
     last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
     categories_dict = requests.get(url=category_options_endpoint, timeout=2).json()
-    return render(response, "main/edit_word.html", {"definition":definition, "last_10_definitions":last_10_definitions, "category_dict":categories_dict})
+    info_dict = data_info_setter(w_d=work_day, c=call, ten_def=last_10_definitions, cat_dict=categories_dict)
+    info_dict["definition"] = definition
+    return render(response, "main/edit_word.html", info_dict)
 
 @login_required
 def word_search(response, word: str):
