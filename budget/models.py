@@ -45,10 +45,11 @@ class WorkDay(Model):
         # This will show a timedelta of how many hours we worked today
         total_time = None
         for ind, call in enumerate(self.calls.all()):
-            if ind == 0:
-                total_time = call.time_call
-            else:
-                total_time += call.time_call
+            if call.active == False:
+                if ind == 0:
+                    total_time = call.time_call
+                else:
+                    total_time += call.time_call
         return total_time
 
     def __str__(self):

@@ -128,10 +128,18 @@ class WorkDaySerializer(ModelSerializer):
         """
         Returns the hours and minutes worked today.
         """
-        seconds = obj.time_worked.seconds
-        hours = int(seconds // 3600)
-        minutes = int((seconds % 3600) // 60)
-        return f"{hours}:{minutes}"
+        try:
+            # In case obj.time_worked.seconds is none because no calls have been placed.
+            print(type(obj.time_worked))
+            print(obj.time_worked.seconds)
+            all_seconds = obj.time_worked.seconds
+            hours = str(all_seconds // 3600)
+            minutes = str((all_seconds % 3600) // 60)
+            seconds = str(all_seconds % 60)
+
+            return f"{hours.zfill(2)}:{minutes.zfill(2)}:{seconds.zfill(2)}"
+        except:
+            return "00:00:00"
 
 class WorkMonthSerializer(ModelSerializer):
     """

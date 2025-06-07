@@ -91,32 +91,27 @@ def dashboard(request):
                 return redirect(to="dashboard_urls:word_search", word=request.POST.get("word_search").lower())
             elif request.POST.get("btn_set_active_call") or request.POST.get("btn_no_call"):
                 # If there isn't a call and there's a work_day, we create a new call
-                print("btn was pressed")
                 call_response = requests.post(url=create_call_endpoint, headers=headers, data={"active":True, "work_day":work_day["id"], "interpreter":request.user.id}, timeout=2)
                 if call_response.status_code != 201:
                     for value in call_response.json().values():
                         messages.error(request, value)
                 else:
                     call = call_response.json()
-                    print(call)
             elif request.POST.get("btn_set_inactive_call"):
                 # This will make set the current call to active = False and set the call_end = bogota_time
                 if call["active"] == True:
-                    print(f"La llamada esta activa? {call["active"]}")
-                    set_call_inactive_response = requests.patch(url=set_call_to_inactive + str(call["id"]) + "/", headers=headers, data={"active":False, "call_end":timezone.now()}, timeout=2)
+                    set_call_inactive_response = requests.patch(url=set_call_to_inactive + str(call["id"]) + "/", headers=headers, data={"active":False, "call_end":localtime(timezone.now())}, timeout=2)
                     if set_call_inactive_response.status_code != 200:
                         for value in set_call_inactive_response.json().values():
                             messages.error(request, value)
                     else:
-                        print(f"La llamada esta activa? {call["active"]}")
-                        call = set_call_inactive_response.json()
-                        print(call)
+                        call = set_call_inactive_response.json()    
+                        work_day = requests.get(url=retrieve_work_day_endpoint + f"{localtime(timezone.now()).date()}" + "/", headers={"Authorization":f"Token {request.COOKIES.get("auth_token")}"}, timeout=2).json()
 
         last_10_definitions = requests.get(url=last_10_definitions_endpoint, headers=headers, timeout=2).json()
         categories_dict = requests.get(url=category_options_endpoint, headers=headers, timeout=2).json()
 
         data_info = data_info_setter(w_d=work_day, c=call, ten_def=last_10_definitions, cat_dict=categories_dict)
-        print(type(work_day))
 
         # Here we make sure, if we have an active call, we use it, else we provide whatever value "call" had.
         the_render = render(request, "main/dashboard.html", data_info)

@@ -290,12 +290,12 @@
               </form>
               <div class="text-end pt-1">
                 <h4 class="text-sm mb-0 text-capitalize">No Active Call</h4>
-                <p class="mb-0">No Hay Llamadas Aún Hoy</p>
+                <p class="mb-0">No Calls Received Yet</p>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-3">
-              <p class="mb-0">Llamadas completadas hoy: <span class="text-success text-sm font-weight-bolder">0</span></p>
+              <p class="mb-0">Completed calls today: <span class="text-success text-sm font-weight-bolder">0</span></p>
             </div>
           </div>
         </div>
@@ -316,7 +316,7 @@
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-3">
-              <p class="mb-0">Llamadas completadas hoy: <span class="text-success text-sm font-weight-bolder">{{work_day.num_calls}}</span></p>
+              <p class="mb-0">Completed calls today: <span class="text-success text-sm font-weight-bolder">{{work_day.num_calls}}</span></p>
             </div>
           </div>
         </div>
@@ -349,7 +349,7 @@
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-3">
-              <p class="mb-0">Llamada número <span class="text-success text-sm font-weight-bolder">{{work_day.num_calls|add:1}}</span> hoy.</p>
+              <p class="mb-0">Call number <span class="text-success text-sm font-weight-bolder">{{work_day.num_calls|add:1}}</span> today.</p>
             </div>
           </div>
         </div>
@@ -357,7 +357,7 @@
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card" style="width: 100%; max-width: 300px;">
             <div class="card-header p-3 pt-2 text-center">
-              <h4 class="text-sm mb-0 text-capitalize">Stopwatch</h4>
+              <h4 class="text-sm mb-0 text-capitalize">Call Timer</h4>
               <p class="mb-0"><span id="stopwatch" style="font-size: 24px; font-weight: bold;">00:00:00</span></p>
             </div>
           </div>
