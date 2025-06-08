@@ -5,12 +5,34 @@ from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from .decorators import not_logged_user
 import logging
 import requests
-from api.endpoints import create_interpreter_endpoint, authenticate_interpreter, destroy_token_endpoint
+from api.endpoints import *
 
 from rest_framework.authtoken.models import Token
+
+
+# Create useful functions here
+def set_calls_inactive(r, h, t):
+    """
+    This method will get all active calls for the current user and set them to inactive.
+    """
+    active_calls = requests.get(url=retrieve_active_call_endpoint, headers=h, timeout=t) # We get all calls for current user.
+    print(active_calls.json(), active_calls.status_code)
+    if active_calls.status_code == 200:
+        for call in active_calls.json():
+            call_inactive = requests.patch(url=set_call_to_inactive_endpoint + str(call["id"]) + "/", headers=h, data={"active":False, "call_end":timezone.localtime(timezone.now())}, timeout=t)
+            print(call_inactive.json(), call_inactive.status_code)
+            if call_inactive.status_code != 200:
+                for value in call_inactive.json().values():
+                    messages.add_message(r, messages.ERROR, value)
+    else:
+        for value in active_calls.json().values():
+            messages.add_message(r, messages.ERROR, value)
+
+
 
 # Create your views here.
 
@@ -37,6 +59,7 @@ def register(request):
 
 #@not_logged_user
 def signin(response):
+    time_out = 2
     try:
         auth_token_key = response.COOKIES["auth_token"]
         response = HttpResponseRedirect(reverse("dashboard_urls:dashboard"))
@@ -54,6 +77,7 @@ def signin(response):
                     login(response, interpreter)
                     logging.info("The info provided was correct and we got the user.")
                     #return HttpResponseRedirect(reverse("dashboard_urls:dashboard"))
+                    set_calls_inactive(r=response, h={"Authorization":f"Token {token_answer.json()["token"]}"}, t=time_out)
                     response = HttpResponseRedirect(reverse("dashboard_urls:dashboard"))
                     response.set_cookie("auth_token", token_answer.cookies["auth_token"], httponly=True)
                     return response
@@ -69,7 +93,11 @@ def signin(response):
 
 #@login_required
 def custom_logout(response):
-    token_response = requests.post(url=destroy_token_endpoint, data={"token":response.COOKIES["auth_token"]}, timeout=2)
+    token = response.COOKIES["auth_token"]
+    headers = {"Authorization":f"Token {token}"}
+    time_out = 2
+    set_calls_inactive(r=response, h=headers, t=time_out)
+    token_response = requests.post(url=destroy_token_endpoint, data={"token":token}, timeout=2)
     logout(response)
     response_http = HttpResponseRedirect(reverse("interpreter_urls:signin"))
     response_http.delete_cookie("auth_token")
