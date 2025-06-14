@@ -83,6 +83,7 @@ class WorkDaySerializer(ModelSerializer):
             "time_worked",
             "active",
             "work_month",
+            "work_month_id",
             "interpreter",
             "num_calls"
         ]
@@ -103,6 +104,12 @@ class WorkDaySerializer(ModelSerializer):
         Returns the ID of the work month associated with the work day.
         """
         return obj.work_month.start_date if obj.work_month else None
+    
+    def get_work_month_id(self, obj):
+        """
+        Returns the ID of the work month associated with the work day.
+        """
+        return obj.work_month.id if obj.work_month else None
     
     def get_day_start_local(self, obj):
         """

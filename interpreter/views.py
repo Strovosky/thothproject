@@ -20,7 +20,6 @@ def set_calls_inactive(r, h, t):
     This method will get all active calls for the current user and set them to inactive.
     """
     active_calls = requests.get(url=retrieve_active_call_endpoint, headers=h, timeout=t) # We get all calls for current user.
-    print(active_calls.json(), active_calls.status_code)
     if active_calls.status_code == 200:
         for call in active_calls.json():
             call_inactive = requests.patch(url=set_call_to_inactive_endpoint + str(call["id"]) + "/", headers=h, data={"active":False, "call_end":timezone.localtime(timezone.now())}, timeout=t)

@@ -25,7 +25,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("dashboard/", include("main.urls")),
     path("", include("interpreter.urls")),
-    path("api/", include("api.urls"))
+    path("api/", include("api.urls")),
+    path("billing/", include("budget.urls")),
     #path("register/", view=register, name="register"),
     #path("", view=signin, name="signin"),
 ]

@@ -4,7 +4,6 @@ from .views import dashboard, new_word, word_description, edit_word, word_search
 app_name = "dashboard_urls"
 
 
-
 urlpatterns = [
     path(route="", view=dashboard, name="dashboard"),
     path(route="new_word/", view=new_word, name="new_word"),

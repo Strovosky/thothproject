@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from django.utils import timezone
-from django.utils.timezone import make_aware, now, localtime, localtime
+from django.utils.timezone import make_aware, now, localtime
+from django.db.models import Q
 
 from main.models import Definition, Category, English, Spanish, Abbreviation
 from rest_framework.authtoken.models import Token
@@ -320,7 +321,24 @@ class RetriveyWorkDayAPIView(RetrieveModelMixin, GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
-    
+
+class RetrieveActiveWorkDayAPIView(ListAPIView):
+    """
+    This API view will retrieve the active WorkDay for the current user.
+    """
+    queryset = WorkDay.objects.filter(active=True)
+    serializer_class = WorkDaySerializer
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        This method will filter the queryset to only include the WorkDay that is active and belongs to the user.
+        """
+        if not self.request.user.is_authenticated:
+            return WorkDay.objects.none()
+        return self.queryset.filter(interpreter=self.request.user)
+
 class RetriveDestroyWorkMonthAPIView(RetrieveUpdateDestroyAPIView):
     """
     This API view will retrieve or destroy a WorkMonth.
@@ -328,6 +346,15 @@ class RetriveDestroyWorkMonthAPIView(RetrieveUpdateDestroyAPIView):
     queryset = WorkMonth.objects.all()
     serializer_class = WorkMonthSerializer
     lookup_field = "is_current"
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+class RetrieveIsCurrentWorkMonthAPIView(ListAPIView):
+    """
+    This API view will yield the current WorkMonth for the current user.
+    """
+    queryset = WorkMonth.objects.filter(is_current=True)
+    serializer_class = WorkMonthSerializer
     authentication_classes = [SessionAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -346,56 +373,98 @@ class LastInactiveCallAPIView(ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
         
+class DefinitionListAPIView(ListAPIView):
+    """
+    This API view will list all the definitions.
+    """
+    queryset = Definition.objects.all()
+    serializer_class = DefinitionSerializer
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
-
-
-""" THIS ONE IS ONLY A TEST
-@api_view(["POST"])
-def create_word(request):
-    "This view will create a new word"
-    if request.data:
-        # We're gonna try this example as if ENGLISH AND SPANISH DON'T EXIST!!!
-        category = Category.objects.get(name=request.data["category"])
-        serialized_category = CategorySerializer(category)
-        serialized_english = EnglishSerializer({"name":request.data["english"]})
-        serialized_spanish = SpanishSerializer({"name":request.data["spanish"]})
-        if serialized_english.is_valid(raise_exception=True) and serialized_spanish.is_valid(raise_exception=True):
-            serialized_spanish.save()
-            serialized_english.save()
-        else:
-            return Response({"error":"Problem with Spanish and English serializers valid info and creation."})
-        if request.data["abbreviation"]:
-            serialized_abbreviation = AbbreviationSerializer({"text":request.data["abbreviation"]})
-            if serialized_abbreviation.is_valid(raise_exception=True):
-                serialized_abbreviation.save()
-        serialized_definition = IndividualDefinitionSerializer({
-            "english":serialized_english.data,
-            "spanish":serialized_spanish.data,
-            "category":serialized_category.data,
-            "abbreviation":serialized_abbreviation.data,
-            "text":request.data["text"]
-        })
-        if serialized_definition.is_valid():
-            serialized_definition.save()
-            return Response(serialized_definition.data, status=200)
-        else:
-            return Response({"error":"Error when creating the definition"}, status=500)
-
+    def get_queryset(self):
+        """
+        This function will filter the queryset to only include the definitions that match the search query.
+        """
+        word = self.kwargs.get("word", None)
+        if word:
+            return self.queryset.filter(Q(english__name__icontains=word) | Q(spanish__name__icontains=word) | Q(text__icontains=word) | Q(abbreviation__text__icontains=word)).distinct()
         
-    #serialized_definition = IndividualDefinitionSerializer(data=request.data)
-    # I HAVE TO CREATE A SERIALIZER FOR ENGLISH, SPANISH, ABBREVIATION...
-    #if serialized_definition.is_valid(raise_exception=True):
-    #    print(serialized_definition.data)
-    #    instance = serialized_definition.save()
-    #    return Response(serialized_definition.data, status=200)
-    return Response(request.data, status=200)"""
+class RetrieveCurrentWorkMonthAPIView(RetrieveAPIView):
+    """
+    This API view will retrieve a WorkMonth by its id.
+    """
+    queryset = WorkMonth.objects.all()
+    serializer_class = WorkMonthSerializer
+    lookup_field = "pk"
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        """
+        This method will filter the queryset to only include the WorkMonth that is current and belongs to the user.
+        """
+        if not self.request.user.is_authenticated:
+            return WorkMonth.objects.none()
+        return self.queryset.filter(is_current=True, interpreter=self.request.user)
+    
+class DayMonthCurrentVerifierAPIView(APIView):
+    """
+    This API view will verify if the current WorkMonth and WorkDay is the same as the one in the request.
+    """
+    authentication_classes = [SessionAuthentication, TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, *args, **kwargs):
+        current_work_month = WorkMonth.objects.filter(is_current=True, interpreter=request.user).first()
+        if not current_work_month:
+            return Response({"error": "No current work month found."}, status=status.HTTP_404_NOT_FOUND)
+        current_work_day = WorkDay.objects.filter(active=True, interpreter=request.user).first()
+        if not current_work_day:
+            return Response({"error": "No current work day found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        change = {"change_work_month": False, "change_work_day": False}
 
+        # Let's work with the month first.
+        if current_work_month.end_date.date() < localtime(timezone.now()).date():
+            # If the current WorkMonth is older than today, we set its is_current to False and create a new WorkMonth.
+            current_work_month.is_current = False
+            current_work_month.save()
+            # Create a new WorkMonth
+            if localtime(timezone.now()).day >= 15:
+                # If today is after the 15th, create a new WorkMonth with end date on the 14th of the next month
+                current_work_month = WorkMonth.objects.create(
+                    start_date=localtime(timezone.now()),
+                    end_date=localtime(timezone.now()).replace(day=14).replace(month=localtime(timezone.now()).month + 1).replace(hour=23, minute=59, second=59),
+                    is_current=True,
+                    interpreter=request.user
+                )
+                change["change_work_month"] = True
+                change["work_month"] = WorkMonthSerializer(current_work_month).data
+            else:
+                # If today is before or on the 15th, create a new WorkMonth with end date on the 14th of the current month
+                current_work_month = WorkMonth.objects.create(
+                    start_date=localtime(timezone.now()),
+                    end_date=localtime(timezone.now()).replace(day=14, hour=23, minute=59, second=59),
+                    is_current=True,
+                    interpreter=request.user
+                )
+                change["change_work_month"] = True
+                change["work_month"] = WorkMonthSerializer(current_work_month).data
 
+        # Now let's work with the WorkDay.
+        if current_work_day.day_start.date() != localtime(timezone.now()).date():
+            # If the current WorkDay is not today, we set its active to False and create a new WorkDay.
+            current_work_day.active = False
+            current_work_day.save()
+            work_day = WorkDay.objects.create(
+                active=True,
+                work_month=current_work_month,
+                interpreter=request.user,
+                day_start=localtime(timezone.now())
+            )
+            change["change_work_day"] = True
+            change["work_day"] = WorkDaySerializer(work_day).data
 
-
-
-
-
+        return Response(change, status=status.HTTP_200_OK)
 
