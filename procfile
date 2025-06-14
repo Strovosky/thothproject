@@ -1,2 +1,2 @@
-web: gunicorn thothproject.wsgi --log-file
-web: python manage.py migrate && gunicorn thothproject.wsgi
+release: python manage.py migrate
+web: gunicorn thothproject.wsgi --bind 0.0.0.0:8080 --log-file
