@@ -42,9 +42,9 @@ def register(request):
             info_dic = {"name": request.POST.get("user_name"), "email": request.POST.get("user_email")}
             if Interpreter.objects.filter(username=info_dic["name"]).count() == 0 | Interpreter.objects.filter(email=info_dic["email"]).count() == 0:
 
-                new_interpreter = requests.post(url=create_interpreter_endpoint, data={"username":str(info_dic["name"].lower()), "email":str(info_dic["email"]), "password":request.POST.get("user_password"), "is_active":True}, timeout=20, verify=False)
+                new_interpreter = requests.post(url=create_interpreter_endpoint, data={"username":str(info_dic["name"].lower()), "email":str(info_dic["email"]), "password":request.POST.get("user_password"), "is_active":True}, timeout=60, verify=False)
 
-                all_interpreters = requests.get(url=list_all_interpreters_endpoint, timeout=20, verify=False)
+                all_interpreters = requests.get(url=list_all_interpreters_endpoint, timeout=60, verify=False)
                 if all_interpreters.status_code == 200:
                     logging.info("We got all interpreters successfully.")
                     print(all_interpreters.json())
