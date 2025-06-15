@@ -188,7 +188,16 @@ class DestroyCurrentToken(APIView):
             return Response({"token_destroyed":True}, status=status.HTTP_200_OK)
         except:
             return Response({"token_destroyed":False}, status=status.HTTP_404_NOT_FOUND)
-        
+
+class ListAllInterpretersAPIView(ListAPIView):
+    """This API view will list all interpreters."""
+    queryset = Interpreter.objects.all()
+    serializer_class = InterpreterSerializer
+
+    authentication_classes = []
+    permission_classes = []
+
+
 class CreateInterpreterAPIView(CreateAPIView):
     """This API view will create a new user."""
     queryset = Interpreter.objects.all()

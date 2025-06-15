@@ -5,6 +5,8 @@
 base_url = "https://thothproject-production-8ffe.up.railway.app/api/"
 
 
+# Interpreter endpoints
+list_all_interpreters_endpoint = base_url + "list_all_interpreters/"
 authenticate_interpreter = base_url + "auth_interpreter/"
 destroy_token_endpoint = base_url + "destroy_token/"
 create_interpreter_endpoint = base_url + "create_interpreter/"

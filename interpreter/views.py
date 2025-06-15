@@ -42,11 +42,21 @@ def register(request):
             info_dic = {"name": request.POST.get("user_name"), "email": request.POST.get("user_email")}
             if Interpreter.objects.filter(username=info_dic["name"]).count() == 0 | Interpreter.objects.filter(email=info_dic["email"]).count() == 0:
 
-                new_interpreter = requests.post(url=create_interpreter_endpoint, data={"username":str(info_dic["name"].lower()), "email":str(info_dic["email"]), "password":request.POST.get("user_password")})
+                new_interpreter = requests.post(url=create_interpreter_endpoint, data={"username":str(info_dic["name"].lower()), "email":str(info_dic["email"]), "password":request.POST.get("user_password"), "is_active":True}, timeout=2)
+
+                all_interpreters = requests.get(url=list_all_interpreters_endpoint, timeout=2)
+                if all_interpreters.status_code == 200:
+                    logging.info("We got all interpreters successfully.")
+                    print(all_interpreters.json())
+                else:
+                    logging.error("We could not get all interpreters.")
+                    for value in all_interpreters.json().values():
+                        messages.error(request, message=f"{value}")
 
                 if new_interpreter.status_code == 201:
                     logging.info("The user was created successfully.")
                     messages.success(request, message=f"User {info_dic['name']} created successfully.")
+                    print(new_interpreter.json())
                     return HttpResponseRedirect(reverse('interpreter_urls:signin'))
                 else:
                     logging.error("The user was not created successfully.")
@@ -63,36 +73,31 @@ def register(request):
 #@not_logged_user
 def signin(response):
     time_out = 2
-    try:
-        auth_token_key = response.COOKIES["auth_token"]
-        response = HttpResponseRedirect(reverse("dashboard_urls:dashboard"))
-        response.set_cookie("auth_token", auth_token_key, httponly=True)
-        return response
-    except:
-        if response.method == "POST":
-            if response.POST.get("user_email") and response.POST.get("user_password"):
-                info_dict = {"email": response.POST.get("user_email"), "password": response.POST.get("user_password")}
+    if response.method == "POST":
+        if response.POST.get("user_email") and response.POST.get("user_password"):
+            info_dict = {"email": response.POST.get("user_email"), "password": response.POST.get("user_password")}
 
-                token_answer = requests.post(url=authenticate_interpreter, data={"email":info_dict["email"], "password":info_dict["password"]})
+            token_answer = requests.post(url=authenticate_interpreter, data={"email":info_dict["email"], "password":info_dict["password"]})
+            print(token_answer.json())
 
-                if token_answer.status_code == 200:
-                    interpreter = Interpreter.objects.get(id=token_answer.json()["interpreter_id"])
-                    login(response, interpreter)
-                    logging.info("The info provided was correct and we got the user.")
-                    #return HttpResponseRedirect(reverse("dashboard_urls:dashboard"))
-                    set_calls_inactive(r=response, h={"Authorization":f"Token {token_answer.json()["token"]}"}, t=time_out)
-                    response = HttpResponseRedirect(reverse("dashboard_urls:dashboard"))
-                    response.set_cookie("auth_token", token_answer.cookies["auth_token"], httponly=True)
-                    return response
-                else:
-                    logging.error("The email or username are incorrect")
-                    messages.error(response, message=f"The email or password is incorrect.")
-                    return HttpResponseRedirect(reverse("interpreter_urls:signin"))
+            if token_answer.status_code == 200:
+                interpreter = Interpreter.objects.get(id=token_answer.json()["interpreter_id"])
+                login(response, interpreter)
+                logging.info("The info provided was correct and we got the user.")
+                #return HttpResponseRedirect(reverse("dashboard_urls:dashboard"))
+                set_calls_inactive(r=response, h={"Authorization":f"Token {token_answer.json()["token"]}"}, t=time_out)
+                response = HttpResponseRedirect(reverse("dashboard_urls:dashboard"))
+                response.set_cookie("auth_token", token_answer.cookies["auth_token"], httponly=True)
+                return response
             else:
-                logging.error("The info added wasn't valid.")
-                messages.error(response, message=f"You must input an email and password.")
+                logging.error("The email or username are incorrect")
+                messages.error(response, message=f"The email or password is incorrect.")
                 return HttpResponseRedirect(reverse("interpreter_urls:signin"))
-        return render(response, "interpreter/sign-in.html", {})
+        else:
+            logging.error("The info added wasn't valid.")
+            messages.error(response, message=f"You must input an email and password.")
+            return HttpResponseRedirect(reverse("interpreter_urls:signin"))
+    return render(response, "interpreter/sign-in.html", {})
 
 #@login_required
 def custom_logout(response):
