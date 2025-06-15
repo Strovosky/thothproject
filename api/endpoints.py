@@ -1,7 +1,9 @@
 # Here we'll store all of the endpoints
 
 
-base_url = "http://localhost:8000/api/"
+#base_url = "http://localhost:8000/api/"
+base_url = "https://thothproject-production-8ffe.up.railway.app/api/"
+
 
 authenticate_interpreter = base_url + "auth_interpreter/"
 destroy_token_endpoint = base_url + "destroy_token/"
