@@ -29,11 +29,11 @@ DEBUG = False
 
 
 ALLOWED_HOSTS = [
-    'thothproject-production.up.railway.app',
+    'thothproject-production-8ffe.up.railway.app',
     'localhost',
     ]
 CSRF_TRUSTED_ORIGINS = [
-    'https://thothproject-production.up.railway.app',
+    'https://thothproject-production-8ffe.up.railway.app',
     ]
 
 # Application definition
