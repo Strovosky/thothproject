@@ -41,14 +41,18 @@ def register(request):
         if request.POST.get("user_name") and request.POST.get("user_email") and request.POST.get("user_password") and request.POST.get("terms"):
             info_dic = {"name": request.POST.get("user_name"), "email": request.POST.get("user_email")}
             if Interpreter.objects.filter(username=info_dic["name"]).count() == 0 | Interpreter.objects.filter(email=info_dic["email"]).count() == 0:
-                #new_interpreter = Interpreter.objects.create(
-                #    username = str(info_dic["name"]).lower(),
-                #    email = info_dic["email"]
-                #)
+
                 new_interpreter = requests.post(url=create_interpreter_endpoint, data={"username":str(info_dic["name"].lower()), "email":str(info_dic["email"]), "password":request.POST.get("user_password")})
-                #new_interpreter.set_password(response.POST.get("user_password"))
-                #new_interpreter.save()
-                return HttpResponseRedirect(reverse('interpreter_urls:signin'))
+
+                if new_interpreter.status_code == 201:
+                    logging.info("The user was created successfully.")
+                    messages.success(request, message=f"User {info_dic['name']} created successfully.")
+                    return HttpResponseRedirect(reverse('interpreter_urls:signin'))
+                else:
+                    logging.error("The user was not created successfully.")
+                    for value in new_interpreter.json().values():
+                        messages.error(request, message=f"{value}")
+                    return HttpResponseRedirect(reverse('interpreter_urls:register'))
             else:
                 if Interpreter.objects.filter(username=info_dic["name"]).count() != 0:
                     messages.warning(request, message=f"User {info_dic['name']} already exists.")

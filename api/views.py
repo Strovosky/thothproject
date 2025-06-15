@@ -194,8 +194,8 @@ class CreateInterpreterAPIView(CreateAPIView):
     queryset = Interpreter.objects.all()
     serializer_class = InterpreterSerializer
 
-    authentication_classes = [SessionAuthentication, TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    authentication_classes = []
+    permission_classes = []
 
     def perform_create(self, serializer):
         if serializer.is_valid(raise_exception=True):
